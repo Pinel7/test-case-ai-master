@@ -1,6 +1,0 @@
-.lib-content-header .folder-badge {
-    font-size: 0.72rem; color: var(--color-text-secondary);
-    background: var(--color-bg); padding: 2px 8px; border-radius: 10px;
-}
-
-/* Library batch bar */

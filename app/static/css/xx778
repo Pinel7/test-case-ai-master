@@ -1,5 +1,0 @@
-#sidebar.sidebar-collapsed {
-    width: 60px;
-    min-width: 60px;
-    overflow-y: auto;
-}

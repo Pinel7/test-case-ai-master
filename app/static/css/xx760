@@ -1,1 +1,0 @@
-.api-test-response { font-family: "SF Mono", "Consolas", monospace; font-size: 0.82rem; white-space: pre-wrap; word-break: break-all; overflow: auto; min-height: 200px; padding: 8px; background: var(--color-bg); border-radius: 6px; line-height: 1.5; }

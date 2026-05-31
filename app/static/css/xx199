@@ -1,4 +1,0 @@
-.setup-step-body h3 {
-    font-size: 1.05rem; font-weight: 700; margin: 0 0 6px;
-    color: var(--color-text);
-}

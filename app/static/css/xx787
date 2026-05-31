@@ -1,4 +1,0 @@
-#sidebar.sidebar-collapsed .nav-item {
-    padding: 10px;
-    justify-content: center;
-}

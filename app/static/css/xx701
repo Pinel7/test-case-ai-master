@@ -1,9 +1,0 @@
-.gen-pw-strength-dot.very-strong { background: #1e56a0; }
-[data-theme="dark"] .gen-strength.weak { background: #4a1a1a; }
-[data-theme="dark"] .gen-strength.medium { background: #4a3a0a; }
-[data-theme="dark"] .gen-strength.strong { background: #0a2a1a; }
-[data-theme="dark"] .gen-strength.very-strong { background: #0a1a3a; }
-
-/* ============================
-   MARKDOWN PREVIEW
-   ============================ */

@@ -1,3 +1,0 @@
-.api-field label {
-    display: block; font-size: 0.78rem; color: var(--color-text-secondary); margin-bottom: 4px;
-}

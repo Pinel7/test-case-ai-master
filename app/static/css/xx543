@@ -1,1 +1,0 @@
-.regex-textarea { min-height: 180px; font-family: "SF Mono", "Consolas", monospace; font-size: 0.85rem; line-height: 1.7; resize: vertical; }

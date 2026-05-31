@@ -1,8 +1,0 @@
-.tree-item {
-    display: flex; align-items: center; gap: 3px;
-    padding: 5px 10px; cursor: pointer;
-    border-radius: 4px; margin: 1px 4px;
-    transition: all var(--transition);
-    font-size: 0.82rem; color: var(--color-text);
-    user-select: none;
-}

@@ -1,1 +1,0 @@
-.export-filename input:focus { border-color: var(--color-accent); outline: none; }

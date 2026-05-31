@@ -1,8 +1,0 @@
-.panel-label {
-    padding: 10px 16px;
-    font-size: 0.8rem; font-weight: 600;
-    color: var(--color-text-secondary);
-    border-bottom: 1px solid var(--color-border);
-    display: flex; align-items: center; gap: 8px;
-    flex-shrink: 0;
-}

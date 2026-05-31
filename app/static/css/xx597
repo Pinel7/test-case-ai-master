@@ -1,1 +1,0 @@
-.env-card-url { font-size: 0.78rem; color: var(--color-text-secondary); font-family: "SF Mono", monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

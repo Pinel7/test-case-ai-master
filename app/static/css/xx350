@@ -1,4 +1,0 @@
-.dep-lib-layout {
-    display: flex; gap: 10px;
-    min-height: 320px; max-height: 50vh;
-}

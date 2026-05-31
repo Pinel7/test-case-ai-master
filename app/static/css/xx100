@@ -1,4 +1,0 @@
-.export-icon {
-    font-size: 3.5rem; color: var(--color-accent);
-    margin-bottom: 12px;
-}

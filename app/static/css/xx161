@@ -1,8 +1,0 @@
-.login-bg-shapes span:nth-child(5) { left: 45%; top: 50%; width: 200px; height: 200px; animation-delay: 8s; animation-duration: 35s; background: radial-gradient(circle, rgba(139,92,246,.04) 0%, transparent 70%); }
-@keyframes loginFloat {
-    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-    33% { transform: translate(30px, -30px) rotate(120deg) scale(1.1); }
-    66% { transform: translate(-20px, 20px) rotate(240deg) scale(0.9); }
-    100% { transform: translate(0, 0) rotate(360deg) scale(1); }
-}
-

@@ -1,5 +1,0 @@
-#sidebar.sidebar-collapsed .sidebar-footer {
-    padding: 12px 8px;
-    flex-direction: column;
-    gap: 6px;
-}

@@ -1,1 +1,0 @@
-.diff-table tr.diff-del td:first-child::before { content: "− "; color: #cc0000; font-weight: 700; }

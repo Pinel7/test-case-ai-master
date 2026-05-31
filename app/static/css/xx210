@@ -1,5 +1,0 @@
-.setup-details summary {
-    cursor: pointer; font-weight: 600;
-    color: var(--color-accent); margin-bottom: 8px;
-    user-select: none;
-}

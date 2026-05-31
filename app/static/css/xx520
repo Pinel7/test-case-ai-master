@@ -1,1 +1,0 @@
-.diff-table tr.diff-change td:first-child::before { content: "~ "; color: #b8860b; font-weight: 700; }

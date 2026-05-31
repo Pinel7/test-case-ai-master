@@ -1,7 +1,0 @@
-.setup-actions .btn-ghost:hover { color: var(--color-text); }
-
-/* ============================
-   SCROLLBAR (global)
-   ============================ */
-
-/* Auth modal (dropdown variant, used when already logged in) */

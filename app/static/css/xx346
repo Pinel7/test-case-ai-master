@@ -1,8 +1,0 @@
-.dep-tabs-link {
-    display: block; padding: 8px 16px;
-    font-size: 0.85rem; font-weight: 500;
-    color: var(--color-text-secondary);
-    cursor: pointer; user-select: none;
-    border-bottom: 2px solid transparent;
-    transition: all var(--transition);
-}

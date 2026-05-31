@@ -1,5 +1,0 @@
-.dep-breadcrumb .dep-breadcrumb-link {
-    color: var(--color-accent); cursor: pointer;
-    border: none; background: none; font-size: 0.78rem;
-    padding: 0; text-decoration: none;
-}

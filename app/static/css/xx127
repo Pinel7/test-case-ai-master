@@ -1,8 +1,0 @@
-.editor-container {
-    flex: 1; min-height: 520px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 var(--radius) var(--radius);
-    overflow: hidden; position: relative;
-}

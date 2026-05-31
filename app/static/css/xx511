@@ -1,7 +1,0 @@
-.fm-textarea {
-    min-height: 280px;
-    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    resize: vertical;
-}

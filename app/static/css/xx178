@@ -1,1 +1,0 @@
-.login-overlay-box .form-control::placeholder { color: rgba(255,255,255,.25); }

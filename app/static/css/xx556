@@ -1,1 +1,0 @@
-.regex-quick-ref, .regex-common-patterns { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; max-height: 350px; overflow-y: auto; }

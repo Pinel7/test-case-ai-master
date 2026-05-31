@@ -1,4 +1,0 @@
-.quill-editor-wrap .ql-toolbar {
-    border: none; border-bottom: 1px solid var(--color-border);
-    flex-shrink: 0;
-}

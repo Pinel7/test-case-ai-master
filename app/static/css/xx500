@@ -1,9 +1,0 @@
-.report-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-
-[data-theme="dark"] .report-card,
-[data-theme="dark"] .report-chart-card { background: var(--color-card); border-color: var(--color-border); }
-[data-theme="dark"] .report-bar-track { background: #2a2b36; }
-
-/* ============================
-   FILTER DROPDOWNS
-   ============================ */

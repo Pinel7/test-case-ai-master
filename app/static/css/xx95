@@ -1,5 +1,0 @@
-.btn-detail:hover { background: var(--color-accent-light); border-color: var(--color-accent); }
-
-/* ============================
-   SEARCH
-   ============================ */

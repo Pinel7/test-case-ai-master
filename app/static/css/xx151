@@ -1,6 +1,0 @@
-.sidebar-user-info small {
-    display: block;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    color: var(--sidebar-text-muted);
-    font-size: 0.75rem;
-}

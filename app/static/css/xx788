@@ -1,4 +1,0 @@
-#sidebar.sidebar-collapsed .nav-item i {
-    width: auto;
-    font-size: 1.15rem;
-}

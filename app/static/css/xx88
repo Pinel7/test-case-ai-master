@@ -1,9 +1,0 @@
-#testCaseTable td select {
-    width: 100%;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 5px 7px;
-    font-size: 0.8rem;
-    background: transparent;
-    transition: all var(--transition);
-}

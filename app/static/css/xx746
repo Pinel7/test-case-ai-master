@@ -1,1 +1,0 @@
-.tutorial-step-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 14px; height: 100%; }

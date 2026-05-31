@@ -1,6 +1,0 @@
-.export-filename label {
-    display: block; text-align: left;
-    font-size: 0.8rem; font-weight: 600;
-    color: var(--color-text-secondary);
-    margin-bottom: 4px;
-}

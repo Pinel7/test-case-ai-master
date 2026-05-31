@@ -4,11 +4,13 @@
 
 let authToken = null;
 let currentUser = null;
+window.currentUser = null;
 const AUTH_TOKEN_KEY = "itg_auth_token";
 
 function getAuthHeaders() {
     return authToken ? { "Authorization": "Bearer " + authToken } : {};
 }
+window.getAuthHeaders = getAuthHeaders;
 
 function showLoginOverlay() {
     const overlay = document.getElementById("loginOverlay");
@@ -300,6 +302,7 @@ async function checkAuth() {
         const resp = await fetch("/api/auth/me", { headers: getAuthHeaders() });
         if (resp.ok) {
             currentUser = await resp.json();
+            window.currentUser = currentUser;
             if (currentUser && currentUser.id > 0) {
                 hideLoginOverlay();
                 await loadUserSettings();
@@ -310,12 +313,14 @@ async function checkAuth() {
         } else {
             authToken = null;
             currentUser = null;
+            window.currentUser = null;
             localStorage.removeItem(AUTH_TOKEN_KEY);
             showLoginOverlay();
         }
     } catch(e) {
         authToken = null;
         currentUser = null;
+        window.currentUser = null;
         localStorage.removeItem(AUTH_TOKEN_KEY);
         showLoginOverlay();
     }
@@ -340,6 +345,7 @@ async function doLogin(username, password, isOverlay = false) {
         }
         authToken = data.token;
         currentUser = data.user;
+        window.currentUser = currentUser;
         localStorage.setItem(AUTH_TOKEN_KEY, authToken);
         updateAuthUI();
         hideLoginOverlay();
@@ -373,6 +379,7 @@ async function doRegister(username, password, isOverlay = false) {
         }
         authToken = data.token;
         currentUser = data.user;
+        window.currentUser = currentUser;
         localStorage.setItem(AUTH_TOKEN_KEY, authToken);
         updateAuthUI();
         hideLoginOverlay();
@@ -396,6 +403,7 @@ async function doLogout() {
     } catch(_) {}
     authToken = null;
     currentUser = null;
+    window.currentUser = null;
     localStorage.removeItem(AUTH_TOKEN_KEY);
     updateAuthUI();
     showLoginOverlay();

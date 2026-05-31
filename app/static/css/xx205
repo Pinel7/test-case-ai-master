@@ -1,4 +1,0 @@
-.setup-provider-name {
-    font-weight: 700; font-size: 0.9rem;
-    color: var(--color-text); margin-bottom: 4px;
-}

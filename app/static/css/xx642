@@ -1,1 +1,0 @@
-.bug-export-header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; font-size: 0.82rem; border-bottom: 1px solid var(--color-border); }

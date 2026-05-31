@@ -1,6 +1,0 @@
-.luckysheet-wrap {
-    width: 100%;
-    position: relative;
-    box-sizing: border-box;
-}
-/* Ensure the editor container allows Luckysheet's internal scroll */

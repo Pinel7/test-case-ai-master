@@ -1,7 +1,0 @@
-.setup-step-num {
-    width: 32px; height: 32px; min-width: 32px;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: #fff; border-radius: 50%;
-    font-size: 0.85rem; font-weight: 700;
-}

@@ -1,7 +1,0 @@
-.login-bg-shapes span {
-    position: absolute; display: block;
-    width: 20px; height: 20px;
-    background: rgba(255,255,255,.03);
-    border-radius: 50%;
-    animation: loginFloat 20s infinite;
-}

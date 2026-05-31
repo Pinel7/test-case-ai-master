@@ -1,8 +1,0 @@
-.setup-api-key-row .form-control:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(79,70,229,.12);
-    outline: none;
-}
-[data-theme="dark"] .setup-api-key-row .form-control {
-    background: rgba(255,255,255,.06);
-}

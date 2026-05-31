@@ -1,7 +1,0 @@
-.tree-pane-title {
-    font-size: 0.75rem; font-weight: 700;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    margin-right: auto;
-}

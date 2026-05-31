@@ -1,5 +1,0 @@
-.home-key-row {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 6px;
-}

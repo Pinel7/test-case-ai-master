@@ -1,1 +1,0 @@
-.rtm-summary-gauge { flex: 1; min-width: 120px; position: relative; height: 24px; background: #f0f1f5; border-radius: 12px; overflow: hidden; }

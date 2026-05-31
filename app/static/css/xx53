@@ -1,5 +1,0 @@
-.tag-input { width: 100%; min-width: 100px; font-size: 0.78rem; padding: 2px 6px; border: 1px solid var(--color-border); border-radius: 4px; background: transparent; }
-
-/* ============================
-   BUTTONS
-   ============================ */

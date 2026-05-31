@@ -1,4 +1,0 @@
-.lib-check-wrap {
-    display: flex; align-items: center; margin-right: 4px; cursor: pointer;
-    flex-shrink: 0;
-}

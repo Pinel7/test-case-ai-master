@@ -1,9 +1,0 @@
-.dep-select-set-breadcrumb:hover { background: var(--color-accent); color: #fff; }
-
-[data-theme="dark"] .dep-select-folder:hover { background: #252742; }
-[data-theme="dark"] .dep-select-set:hover { background: #252742; }
-[data-theme="dark"] .dep-select-set-breadcrumb { background: #252742; }
-
-/* ============================
-   LOAD FROM LIBRARY MODAL
-   ============================ */

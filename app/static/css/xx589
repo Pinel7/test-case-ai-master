@@ -1,1 +1,0 @@
-.sql-results-table td { padding: 4px 10px; border-bottom: 1px solid #f0f1f5; font-family: "SF Mono", "Consolas", monospace; font-size: 0.78rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

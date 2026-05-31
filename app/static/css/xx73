@@ -1,6 +1,0 @@
-.field-chip.selected {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-    font-weight: 600;
-}

@@ -1,5 +1,0 @@
-.md-preview blockquote { border-left: 3px solid var(--color-accent); padding-left: 12px; color: var(--color-text-secondary); margin-left: 0; }
-
-/* ============================
-   RTM PAGE
-   ============================ */

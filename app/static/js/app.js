@@ -2390,7 +2390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function showShareModal(setId) {
-        const name = prompt("输入要共享的用户名：\n对方登录后可在此处看到共享的用例集（只读）");
+        const name = await showPrompt("输入要共享的用户名：<br><small class='text-muted'>对方登录后可在此处看到共享的用例集（只读）</small>", "", "共享用例集");
         if (!name || !name.trim()) return;
         try {
             const resp = await fetch("/api/library/" + setId + "/share", {
@@ -2412,6 +2412,261 @@ document.addEventListener("DOMContentLoaded", () => {
             toast("共享失败：" + (err.message || err), "danger");
         }
     }
+
+    // ---- Notifications ----
+    let notificationsModal = null;
+    try { notificationsModal = new bootstrap.Modal(document.getElementById("notificationsModal")); } catch (_) {}
+
+    async function loadNotifications() {
+        try {
+            const resp = await fetch("/api/notifications", { headers: getAuthHeaders() });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            renderNotifications(data.notifications || []);
+            updateNotifBadge(data.unread_count || 0);
+        } catch (_) {}
+    }
+
+    function updateNotifBadge(count) {
+        const badge = document.getElementById("notifBadge");
+        if (!badge) return;
+        if (count > 0) {
+            badge.textContent = count > 99 ? "99+" : count;
+            badge.style.display = "";
+        } else {
+            badge.style.display = "none";
+        }
+    }
+
+    function renderNotifications(notifs) {
+        const container = document.getElementById("notificationsList");
+        if (!container) return;
+        if (!notifs.length) {
+            container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无消息</div>';
+            return;
+        }
+        let html = "";
+        for (const n of notifs) {
+            const isPending = n.status === "pending";
+            const isFriendReq = n.type === "friend_request";
+            const statusLabel = n.status === "pending" ? "待处理" : n.status === "accepted" ? "已接受" : n.status === "declined" ? "已拒绝" : n.status;
+            const icon = isFriendReq ? "bi-person-plus" : "bi-share";
+            html += '<div class="notif-item d-flex align-items-start gap-3 p-3 mb-2 rounded border">';
+            html += '<i class="' + icon + ' fs-4 mt-1" style="color:var(--color-accent)"></i>';
+            html += '<div class="flex-grow-1">';
+            html += '<div class="fw-medium">' + escHtml(n.message || "") + '</div>';
+            html += '<small class="text-muted">' + escHtml(n.created_at || "") + ' · ' + statusLabel + '</small>';
+            html += '</div>';
+            if (isPending) {
+                html += '<div class="d-flex gap-1">';
+                html += '<button class="btn btn-sm btn-outline-success notif-accept" data-id="' + n.id + '"><i class="bi bi-check-lg"></i> 接受</button>';
+                html += '<button class="btn btn-sm btn-outline-danger notif-decline" data-id="' + n.id + '"><i class="bi bi-x-lg"></i> 拒绝</button>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
+        container.querySelectorAll(".notif-accept").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                try {
+                    const resp = await fetch("/api/notifications/" + id + "/accept", { method: "POST", headers: getAuthHeaders() });
+                    const data = await resp.json();
+                    toast(data.message || "已接受", "success");
+                    loadNotifications();
+                } catch (err) {
+                    toast("操作失败：" + (err.message || err), "danger");
+                }
+            });
+        });
+        container.querySelectorAll(".notif-decline").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                try {
+                    const resp = await fetch("/api/notifications/" + id + "/decline", { method: "POST", headers: getAuthHeaders() });
+                    const data = await resp.json();
+                    toast(data.message || "已拒绝", "info");
+                    loadNotifications();
+                } catch (err) {
+                    toast("操作失败：" + (err.message || err), "danger");
+                }
+            });
+        });
+    }
+
+    // ---- Contacts ----
+    let contactsModal = null;
+    try { contactsModal = new bootstrap.Modal(document.getElementById("contactsModal")); } catch (_) {}
+
+    async function loadContacts() {
+        const container = document.getElementById("contactsList");
+        if (!container) return;
+        try {
+            const resp = await fetch("/api/contacts", { headers: getAuthHeaders() });
+            if (!resp.ok) { container.innerHTML = '<div class="text-center text-muted py-3">加载失败</div>'; return; }
+            const data = await resp.json();
+            const contacts = data.contacts || [];
+            if (!contacts.length) {
+                container.innerHTML = '<div class="text-center text-muted py-3">暂无联系人</div>';
+                return;
+            }
+            let html = "";
+            for (const c of contacts) {
+                html += '<div class="d-flex align-items-center gap-2 p-2 rounded border mb-1 contact-item">';
+                html += '<i class="bi bi-person-circle fs-5"></i>';
+                html += '<span class="flex-grow-1">' + escHtml(c.username) + '</span>';
+                html += '<button class="btn btn-sm btn-outline-danger contact-remove" data-id="' + c.id + '" title="删除联系人"><i class="bi bi-person-x"></i></button>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
+            container.querySelectorAll(".contact-remove").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const cid = btn.dataset.id;
+                    if (!(await showConfirm("确定删除此联系人？"))) return;
+                    try {
+                        const resp = await fetch("/api/contacts/" + cid, { method: "DELETE", headers: getAuthHeaders() });
+                        if (!resp.ok) throw new Error("删除失败");
+                        toast("已删除联系人", "info");
+                        loadContacts();
+                    } catch (err) {
+                        toast("删除失败：" + (err.message || err), "danger");
+                    }
+                });
+            });
+            // Click on a contact copies username to clipboard for sharing
+            container.querySelectorAll(".contact-item").forEach(item => {
+                item.style.cursor = "pointer";
+                item.addEventListener("dblclick", () => {
+                    const username = item.querySelector("span")?.textContent || "";
+                    if (username) {
+                        navigator.clipboard.writeText(username).then(() => {
+                            toast("已复制用户名：" + username, "info");
+                        }).catch(() => {});
+                    }
+                });
+            });
+        } catch (_) {
+            container.innerHTML = '<div class="text-center text-muted py-3">加载失败</div>';
+        }
+    }
+
+    document.getElementById("btnAddContact")?.addEventListener("click", async () => {
+        const input = document.getElementById("contactSearchInput");
+        if (!input || !input.value.trim()) { toast("请输入用户名", "warning"); return; }
+        try {
+            const resp = await fetch("/api/contacts/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                body: JSON.stringify({ username: input.value.trim() }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail?.message || "添加失败");
+            toast(data.message || "好友请求已发送", "success");
+            input.value = "";
+            loadNotifications(); // refresh notifications to show the request
+        } catch (err) {
+            toast("添加失败：" + (err.message || err), "danger");
+        }
+    });
+    document.getElementById("contactSearchInput")?.addEventListener("keydown", e => {
+        if (e.key === "Enter") document.getElementById("btnAddContact")?.click();
+    });
+
+    // ---- Notification bell click ----
+    document.getElementById("btnNotifications")?.addEventListener("click", () => {
+        loadNotifications();
+        if (notificationsModal) notificationsModal.show();
+    });
+
+    // ---- Contacts button click ----
+    document.getElementById("btnContacts")?.addEventListener("click", () => {
+        loadContacts();
+        if (contactsModal) contactsModal.show();
+    });
+
+    // Periodically poll for new notifications
+    let notifPollInterval = null;
+    function startNotifPolling() {
+        stopNotifPolling();
+        loadNotifications(); // initial load
+        notifPollInterval = setInterval(loadNotifications, 30000); // every 30s
+    }
+    function stopNotifPolling() {
+        if (notifPollInterval) { clearInterval(notifPollInterval); notifPollInterval = null; }
+    }
+
+    // Update auth UI to show notification/contacts buttons when logged in
+    const _origUpdateAuthUI = window.updateAuthUI;
+    window.updateAuthUI = function() {
+        if (typeof _origUpdateAuthUI === "function") _origUpdateAuthUI();
+        const notifBtn = document.getElementById("btnNotifications");
+        const contactBtn = document.getElementById("btnContacts");
+        const isLoggedIn = window.currentUser && window.currentUser.id > 0;
+        if (notifBtn) notifBtn.style.display = isLoggedIn ? "" : "none";
+        if (contactBtn) contactBtn.style.display = isLoggedIn ? "" : "none";
+        if (isLoggedIn) { startNotifPolling(); } else { stopNotifPolling(); updateNotifBadge(0); }
+    };
+
+    // Update share modal to show contacts
+    showShareModal = function(setId) {
+        let contacts = [];
+        fetch("/api/contacts", { headers: getAuthHeaders() })
+            .then(r => r.ok ? r.json() : { contacts: [] })
+            .then(d => { contacts = d.contacts || []; showShareDialog(); })
+            .catch(() => showShareDialog());
+        function showShareDialog() {
+            let html = '<div class="text-start">';
+            html += '<p class="mb-2">选择联系人，或直接输入用户名：</p>';
+            if (contacts.length > 0) {
+                html += '<div class="mb-2 d-flex flex-wrap gap-1" id="shareContactList">';
+                for (const c of contacts) {
+                    html += '<span class="btn btn-sm btn-outline-primary contact-pick" data-username="' + escHtml(c.username) + '" style="cursor:pointer">' + escHtml(c.username) + '</span>';
+                }
+                html += '</div>';
+            }
+            html += '<div class="input-group"><span class="input-group-text"><i class="bi bi-person"></i></span>';
+            html += '<input type="text" id="shareUsernameInput" class="form-control" placeholder="输入用户名"></div>';
+            html += '</div>';
+
+            showCustomDialog("共享用例集", html, [
+                { text: "取消", cls: "btn-secondary", action: () => {} },
+                { text: "发送共享请求", cls: "btn-primary", action: doShare },
+            ]);
+            // Wire contact clicks
+            setTimeout(() => {
+                document.querySelectorAll("#shareContactList .contact-pick").forEach(el => {
+                    el.addEventListener("click", () => {
+                        const input = document.getElementById("shareUsernameInput");
+                        if (input) input.value = el.dataset.username;
+                    });
+                });
+            }, 50);
+        }
+        async function doShare() {
+            const input = document.getElementById("shareUsernameInput");
+            const name = input ? input.value.trim() : "";
+            if (!name) { toast("请输入或选择用户名", "warning"); return; }
+            try {
+                const resp = await fetch("/api/library/" + setId + "/share", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                    body: JSON.stringify({ username: name }),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    const msg = typeof err.detail?.message === "string" ? err.detail.message
+                              : typeof err.detail === "string" ? err.detail
+                              : "共享失败";
+                    throw new Error(msg);
+                }
+                const data = await resp.json();
+                toast(data.message || "共享请求已发送", "success");
+                loadLibraryContent(currentLibFolderId);
+            } catch (err) {
+                toast("共享失败：" + (err.message || err), "danger");
+            }
+        }
+    };
 
     // Create empty set in the current folder
     async function createEmptySet(folderId) {
@@ -2514,11 +2769,14 @@ document.addEventListener("DOMContentLoaded", () => {
         pane.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner mb-2"></div><p>加载中...</p></div>';
 
         const folderName = folderId ? "当前文件夹" : "根目录";
+        const sqEl = document.getElementById("libSearchInput");
+        const q = sqEl ? sqEl.value.trim() : "";
         let toolbar = '<div class="lib-content-header">';
         toolbar += '<i class="bi bi-folder2-open"></i>';
         toolbar += '<span class="folder-name">' + escHtml(folderName) + '</span>';
         toolbar += '<span class="folder-badge" id="libSetCount">-</span>';
         toolbar += '<div class="ms-auto d-flex gap-2">';
+        toolbar += '<input type="search" class="form-control form-control-sm lib-search-input" id="libSearchInput" placeholder="搜索用例集..." value="' + escHtml(q) + '">';
         toolbar += '<button class="btn btn-ghost btn-sm" id="btnNewLibSet"><i class="bi bi-plus-lg"></i> 新建用例集</button>';
         toolbar += '<button class="btn btn-ghost btn-sm" id="btnImportToLib"><i class="bi bi-upload"></i> 导入</button>';
         toolbar += '</div></div>';
@@ -2545,7 +2803,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             // Fetch both sets and child folders in parallel
             let setsUrl = `/api/library/list`;
-            if (folderId !== null && folderId !== undefined) setsUrl += `?folder_id=${folderId}`;
+            const params = [];
+            if (folderId !== null && folderId !== undefined) params.push(`folder_id=${folderId}`);
+            if (q) params.push(`q=${encodeURIComponent(q)}`);
+            if (params.length) setsUrl += '?' + params.join('&');
             const [setsResp, foldersResp] = await Promise.all([
                 fetch(setsUrl),
                 fetch("/api/library/folders")
@@ -2554,6 +2815,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const setsData = await setsResp.json();
             const allFolders = foldersResp.ok ? (await foldersResp.json()).folders || [] : [];
             const sets = setsData.sets || [];
+
+            // Update shared sets badge on the library button
+            const sharedCount = sets.filter(s => s.shared_by && !s.owned).length;
+            const badge = document.getElementById("libSharedBadge");
+            if (badge) {
+                badge.textContent = sharedCount > 0 ? sharedCount : "";
+                badge.style.display = sharedCount > 0 ? "" : "none";
+            }
 
             // Filter child folders: parent_id == folderId (or IS NULL for root)
             const childFolders = allFolders.filter(f =>
@@ -2586,13 +2855,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 sets.forEach(s => {
                     const isShared = s.shared_by && !s.owned;
                     body += '<div class="lib-item' + (isShared ? ' lib-item-shared' : '') + '" data-id="' + s.id + '">';
-                    body += '<label class="lib-check-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="lib-checkbox" data-id="' + s.id + '"' + (isShared ? ' disabled' : '') + '></label>';
+                    body += '<label class="lib-check-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="lib-checkbox" data-id="' + s.id + '"></label>';
                     body += '<div class="lib-item-icon"><i class="bi ' + (isShared ? 'bi-share' : 'bi-file-earmark-text') + '"></i></div>';
                     body += '<div class="lib-item-info"><strong>' + escHtml(s.name) + '</strong><small>' + (isShared ? escHtml('来自 ' + s.shared_by) : escHtml(s.updated_at || "")) + '</small></div>';
                     body += '<span class="lib-item-badge">' + s.case_count + ' 条</span>';
                     body += '<div class="lib-item-actions">';
                     if (isShared) {
                         body += '<button class="lib-load" data-id="' + s.id + '" title="加载"><i class="bi bi-box-arrow-down"></i></button>';
+                        body += '<button class="danger lib-delete" data-id="' + s.id + '" title="移除"><i class="bi bi-trash"></i></button>';
                     } else {
                         body += '<button class="lib-load" data-id="' + s.id + '" title="加载"><i class="bi bi-box-arrow-down"></i></button>';
                         body += '<button class="lib-share" data-id="' + s.id + '" title="共享"><i class="bi bi-share"></i></button>';
@@ -2634,6 +2904,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const btnImportToLib = document.getElementById("btnImportToLib");
             if (btnNewLibSet) btnNewLibSet.addEventListener("click", () => createEmptySet(folderId));
             if (btnImportToLib) btnImportToLib.addEventListener("click", () => importToFolder(folderId));
+
+            // Search input — debounced reload
+            const searchInput = document.getElementById("libSearchInput");
+            if (searchInput) {
+                let searchTimer;
+                searchInput.addEventListener("input", () => {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(() => {
+                        loadLibraryContent(folderId);
+                    }, 300);
+                });
+            }
 
             // Select all
             const selectAll = document.getElementById("libSelectAll");
@@ -2773,7 +3055,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const resp = await fetch("/api/library/" + id, { method: "DELETE" });
             if (!resp.ok) throw new Error((await resp.json()).detail?.message || "删除失败");
             toast("已删除", "success");
-            loadLibraryList();
+            loadLibraryContent(currentLibFolderId);
         } catch (err) {
             showError("删除失败：" + (err.message || err));
         }
@@ -2879,30 +3161,36 @@ document.addEventListener("DOMContentLoaded", () => {
     let _promptResolve = null;
     const confirmModalEl = document.getElementById("confirmModal");
     let confirmModalBs = null;
-    if (confirmModalEl) {
-        confirmModalBs = new bootstrap.Modal(confirmModalEl, { backdrop: 'static', keyboard: false });
-        confirmModalEl.addEventListener("hidden.bs.modal", () => {
-            if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
-            if (_promptResolve) { _promptResolve(null); _promptResolve = null; }
-        });
-        document.getElementById("confirmModalOk").addEventListener("click", () => {
-            const input = document.getElementById("confirmModalInput");
-            if (_promptResolve) {
-                const val = input.value;
-                _promptResolve(val); _promptResolve = null;
-                input.value = "";
-            } else if (_confirmResolve) {
-                _confirmResolve(true); _confirmResolve = null;
-            }
-            confirmModalBs.hide();
-        });
-        document.getElementById("confirmModalCancel").addEventListener("click", () => {
-            const input = document.getElementById("confirmModalInput");
-            if (_promptResolve) {
-                _promptResolve(null); _promptResolve = null;
-                input.value = "";
-            }
-        });
+    try {
+        if (confirmModalEl && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+            confirmModalBs = new bootstrap.Modal(confirmModalEl, { backdrop: 'static', keyboard: false });
+            confirmModalEl.addEventListener("hidden.bs.modal", () => {
+                if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+                if (_promptResolve) { _promptResolve(null); _promptResolve = null; }
+            });
+            document.getElementById("confirmModalOk")?.addEventListener("click", () => {
+                const input = document.getElementById("confirmModalInput");
+                if (_promptResolve) {
+                    const val = input.value;
+                    _promptResolve(val); _promptResolve = null;
+                    input.value = "";
+                } else if (_confirmResolve) {
+                    _confirmResolve(true); _confirmResolve = null;
+                }
+                confirmModalBs.hide();
+            });
+            document.getElementById("confirmModalCancel")?.addEventListener("click", () => {
+                const input = document.getElementById("confirmModalInput");
+                if (_promptResolve) {
+                    _promptResolve(null); _promptResolve = null;
+                    input.value = "";
+                }
+            });
+        } else {
+            console.warn("confirmModal element or bootstrap.Modal not available");
+        }
+    } catch (e) {
+        console.error("Failed to init confirm modal:", e);
     }
 
     function showConfirm(msg, title) {

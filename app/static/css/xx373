@@ -1,9 +1,0 @@
-.load-lib-icon {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 1.6rem;
-    margin-bottom: 12px;
-}

@@ -1,1 +1,0 @@
-#sqlEditor { width: 100%; min-height: 220px; border: none; padding: 12px; font-family: "SF Mono", "Consolas", monospace; font-size: 0.85rem; line-height: 1.7; resize: vertical; background: var(--color-surface); color: var(--color-text); }

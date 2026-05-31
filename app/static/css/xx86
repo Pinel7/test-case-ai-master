@@ -1,2 +1,0 @@
-#testCaseTable tbody tr.selected { background: var(--color-accent-light); }
-

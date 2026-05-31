@@ -1,1 +1,0 @@
-.sql-schema-table-name { font-weight: 600; color: var(--color-accent); cursor: pointer; padding: 2px 0; display: flex; align-items: center; gap: 4px; }

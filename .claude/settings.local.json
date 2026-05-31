@@ -128,7 +128,10 @@
       "Bash(taskkill //F //PID 7748)",
       "Bash(taskkill //F //PID 27652)",
       "Bash(taskkill //F //PID 22940)",
-      "Bash(taskkill //F //PID 1496)"
+      "Bash(taskkill //F //PID 1496)",
+      "Bash(taskkill /f /pid 39124)",
+      "Bash(taskkill /f /pid 33888)",
+      "Bash(echo \"started with PID $!\")"
     ]
   }
 }

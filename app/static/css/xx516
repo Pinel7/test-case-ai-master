@@ -1,8 +1,0 @@
-.diff-table td {
-    padding: 4px 10px;
-    border-bottom: 1px solid #f0f1f5;
-    vertical-align: top;
-    white-space: pre-wrap;
-    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
-    font-size: 0.8rem;
-}

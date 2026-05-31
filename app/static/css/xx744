@@ -1,9 +1,0 @@
-.rtm-usage { margin-top: 12px; padding: 8px 12px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); font-size: 0.78rem; color: var(--color-text-secondary); }
-[data-theme="dark"] .rtm-table th { background: #282a36; }
-[data-theme="dark"] .rtm-table td { border-bottom-color: #2a2b36; }
-[data-theme="dark"] .rtm-table tbody tr:hover { background: #282a38; }
-
-/* ============================
-   API TEST PAGE
-   ============================ */
-/* Tutorial card (API test page) */

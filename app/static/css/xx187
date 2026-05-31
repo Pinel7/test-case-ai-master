@@ -1,6 +1,0 @@
-.login-overlay-footer small {
-    color: rgba(255,255,255,.3); font-size: 0.7rem;
-    letter-spacing: 0.5px;
-}
-
-/* Setup guide overlay */

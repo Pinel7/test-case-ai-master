@@ -116,6 +116,36 @@ def _init_db() -> None:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_shared_with ON shared_set_access(shared_with_user_id)"
             )
+            # Migration: notifications table
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    from_user_id INTEGER NOT NULL,
+                    to_user_id INTEGER NOT NULL,
+                    set_id INTEGER NOT NULL,
+                    type TEXT NOT NULL DEFAULT 'share_request',
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    message TEXT DEFAULT '',
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_notif_to ON notifications(to_user_id, status)"
+            )
+            # Migration: contacts table
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS contacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    contact_user_id INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(user_id, contact_user_id)
+                )
+                """
+            )
             conn.commit()
         finally:
             conn.close()
@@ -193,29 +223,33 @@ def get_folder_tree() -> list[dict]:
 # Set CRUD (updated with folder_id support)
 # ---------------------------------------------------------------------------
 
-def list_sets(folder_id: int | None = None, user_id: int = 0) -> list[dict]:
+def list_sets(folder_id: int | None = None, user_id: int = 0, q: str = "") -> list[dict]:
     """Return sets. folder_id=None returns root-level (folder_id IS NULL), -1 returns all.
-    Includes sets shared with the user."""
+    Includes sets shared with the user. q filters by name."""
     from app.services.auth import get_user_by_id
     with _lock:
         conn = _get_conn()
         try:
             # Own sets
+            own_sql = "SELECT id, name, test_cases, requirement_text, folder_id, created_at, updated_at, user_id FROM test_case_sets"
+            own_where = []
+            own_params = []
+            if q:
+                own_where.append("name LIKE ?")
+                own_params.append(f"%{q}%")
             if folder_id is None or folder_id == "null":
-                rows = conn.execute(
-                    "SELECT id, name, test_cases, requirement_text, folder_id, created_at, updated_at, user_id FROM test_case_sets WHERE folder_id IS NULL AND user_id = ? ORDER BY updated_at DESC",
-                    (user_id,),
-                ).fetchall()
+                own_where.append("folder_id IS NULL")
             elif folder_id == -1 or folder_id == "-1":
-                rows = conn.execute(
-                    "SELECT id, name, test_cases, requirement_text, folder_id, created_at, updated_at, user_id FROM test_case_sets WHERE user_id = ? ORDER BY updated_at DESC",
-                    (user_id,),
-                ).fetchall()
+                pass  # no folder filter
             else:
-                rows = conn.execute(
-                    "SELECT id, name, test_cases, requirement_text, folder_id, created_at, updated_at, user_id FROM test_case_sets WHERE folder_id = ? AND user_id = ? ORDER BY updated_at DESC",
-                    (int(folder_id), user_id),
-                ).fetchall()
+                own_where.append("folder_id = ?")
+                own_params.append(int(folder_id))
+            own_where.append("user_id = ?")
+            own_params.append(user_id)
+            rows = conn.execute(
+                own_sql + " WHERE " + " AND ".join(own_where) + " ORDER BY updated_at DESC",
+                own_params,
+            ).fetchall()
 
             result = []
             for r in rows:
@@ -234,15 +268,17 @@ def list_sets(folder_id: int | None = None, user_id: int = 0) -> list[dict]:
 
             # Shared sets (for root-level only, ignore folder for now)
             if folder_id is None or folder_id == "null" or folder_id == -1 or folder_id == "-1":
-                shared_rows = conn.execute(
-                    """SELECT s.id, s.name, s.test_cases, s.requirement_text, s.folder_id,
-                              s.created_at, s.updated_at, sa.shared_by_user_id
-                       FROM shared_set_access sa
-                       JOIN test_case_sets s ON s.id = sa.set_id
-                       WHERE sa.shared_with_user_id = ?
-                       ORDER BY sa.created_at DESC""",
-                    (user_id,),
-                ).fetchall()
+                shared_sql = """SELECT s.id, s.name, s.test_cases, s.requirement_text, s.folder_id,
+                                       s.created_at, s.updated_at, sa.shared_by_user_id
+                                FROM shared_set_access sa
+                                JOIN test_case_sets s ON s.id = sa.set_id
+                                WHERE sa.shared_with_user_id = ?"""
+                shared_params = [user_id]
+                if q:
+                    shared_sql += " AND s.name LIKE ?"
+                    shared_params.append(f"%{q}%")
+                shared_sql += " ORDER BY sa.created_at DESC"
+                shared_rows = conn.execute(shared_sql, shared_params).fetchall()
                 for r in shared_rows:
                     cases = json.loads(r["test_cases"]) if r["test_cases"] else []
                     # Look up sharer username
@@ -268,6 +304,112 @@ def list_sets(folder_id: int | None = None, user_id: int = 0) -> list[dict]:
                         })
 
             return result
+        finally:
+            conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Share Request Notifications
+# ---------------------------------------------------------------------------
+
+def send_share_request(set_id: int, from_user_id: int, to_user_id: int) -> int:
+    """Send a share request notification. Returns notification id (0 on failure)."""
+    from app.services.auth import get_user_by_id
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    sharer = get_user_by_id(from_user_id)
+    sharer_name = sharer["username"] if sharer else f"用户{from_user_id}"
+    with _lock:
+        conn = _get_conn()
+        try:
+            owner = conn.execute(
+                "SELECT id, name FROM test_case_sets WHERE id = ? AND user_id = ?",
+                (set_id, from_user_id),
+            ).fetchone()
+            if not owner:
+                return 0
+            cur = conn.execute(
+                """INSERT INTO notifications (from_user_id, to_user_id, set_id, type, status, message, created_at)
+                   VALUES (?, ?, ?, 'share_request', 'pending', ?, ?)""",
+                (from_user_id, to_user_id, set_id, f"{sharer_name} 分享了「{owner['name']}」给你", now),
+            )
+            conn.commit()
+            return cur.lastrowid
+        except Exception:
+            return 0
+        finally:
+            conn.close()
+
+
+def accept_share_request(notif_id: int, user_id: int) -> bool:
+    """Accept a share request: copy the set to recipient's library."""
+    with _lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute(
+                "SELECT * FROM notifications WHERE id = ? AND to_user_id = ? AND status = 'pending'",
+                (notif_id, user_id),
+            ).fetchone()
+            if not row:
+                return False
+            src = conn.execute(
+                "SELECT * FROM test_case_sets WHERE id = ?",
+                (row["set_id"],),
+            ).fetchone()
+            if not src:
+                return False
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            conn.execute(
+                "INSERT INTO test_case_sets (name, test_cases, requirement_text, folder_id, user_id, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+                (src["name"] + " (来自共享)", src["test_cases"], src["requirement_text"], user_id, now, now),
+            )
+            conn.execute(
+                "UPDATE notifications SET status = 'accepted' WHERE id = ?",
+                (notif_id,),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+
+def decline_share_request(notif_id: int, user_id: int) -> bool:
+    with _lock:
+        conn = _get_conn()
+        try:
+            cur = conn.execute(
+                "UPDATE notifications SET status = 'declined' WHERE id = ? AND to_user_id = ? AND status = 'pending'",
+                (notif_id, user_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+        finally:
+            conn.close()
+
+
+def list_notifications(user_id: int) -> list[dict]:
+    with _lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM notifications WHERE to_user_id = ? ORDER BY created_at DESC",
+                (user_id,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def get_unread_notification_count(user_id: int) -> int:
+    with _lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM notifications WHERE to_user_id = ? AND status = 'pending'",
+                (user_id,),
+            ).fetchone()
+            return row["cnt"] if row else 0
         finally:
             conn.close()
 
@@ -345,11 +487,20 @@ def update_set(set_id: int, name: str, test_cases: list[dict], requirement_text:
 
 
 def delete_set(set_id: int, user_id: int = 0) -> bool:
-    """Delete a set by id. Returns True if successful."""
+    """Delete a set by id (owner) or remove shared access (recipient). Returns True if successful."""
     with _lock:
         conn = _get_conn()
         try:
+            # Try as owner first
             cur = conn.execute("DELETE FROM test_case_sets WHERE id = ? AND user_id = ?", (set_id, user_id))
+            if cur.rowcount > 0:
+                conn.commit()
+                return True
+            # Not owner — check if user has shared access and remove it
+            cur = conn.execute(
+                "DELETE FROM shared_set_access WHERE set_id = ? AND shared_with_user_id = ?",
+                (set_id, user_id),
+            )
             conn.commit()
             return cur.rowcount > 0
         finally:
@@ -602,6 +753,137 @@ def list_shares(set_id: int, user_id: int) -> list[dict]:
                     "permission": r["permission"],
                     "created_at": r["created_at"],
                 })
+            return result
+        finally:
+            conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Contacts — invitation-based
+# ---------------------------------------------------------------------------
+
+def send_friend_request(from_user_id: int, to_username: str) -> int:
+    """Send a friend request notification. Returns notification id (0 on failure)."""
+    from app.services.auth import search_users, get_user_by_id
+    users = search_users(to_username, 1)
+    if not users:
+        return 0
+    to_user = users[0]
+    if to_user["id"] == from_user_id:
+        return 0
+    me = get_user_by_id(from_user_id)
+    my_name = me["username"] if me else f"用户{from_user_id}"
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    with _lock:
+        conn = _get_conn()
+        try:
+            # Check if already friends
+            existing = conn.execute(
+                "SELECT id FROM contacts WHERE user_id = ? AND contact_user_id = ?",
+                (from_user_id, to_user["id"]),
+            ).fetchone()
+            if existing:
+                return -1  # already contacts
+            # Check for existing pending request
+            dup = conn.execute(
+                "SELECT id FROM notifications WHERE from_user_id = ? AND to_user_id = ? AND type = 'friend_request' AND status = 'pending'",
+                (from_user_id, to_user["id"]),
+            ).fetchone()
+            if dup:
+                return -2  # already requested
+            cur = conn.execute(
+                """INSERT INTO notifications (from_user_id, to_user_id, set_id, type, status, message, created_at)
+                   VALUES (?, ?, 0, 'friend_request', 'pending', ?, ?)""",
+                (from_user_id, to_user["id"], f"{my_name} 请求添加你为联系人", now),
+            )
+            conn.commit()
+            return cur.lastrowid
+        except Exception:
+            return 0
+        finally:
+            conn.close()
+
+
+def accept_friend_request(notif_id: int, user_id: int) -> bool:
+    """Accept a friend request: create bidirectional contact relationship."""
+    with _lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute(
+                "SELECT * FROM notifications WHERE id = ? AND to_user_id = ? AND type = 'friend_request' AND status = 'pending'",
+                (notif_id, user_id),
+            ).fetchone()
+            if not row:
+                return False
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            from_uid = row["from_user_id"]
+            conn.execute(
+                "INSERT OR IGNORE INTO contacts (user_id, contact_user_id, created_at) VALUES (?, ?, ?)",
+                (user_id, from_uid, now),
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO contacts (user_id, contact_user_id, created_at) VALUES (?, ?, ?)",
+                (from_uid, user_id, now),
+            )
+            conn.execute(
+                "UPDATE notifications SET status = 'accepted' WHERE id = ?",
+                (notif_id,),
+            )
+            conn.commit()
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+
+def decline_friend_request(notif_id: int, user_id: int) -> bool:
+    with _lock:
+        conn = _get_conn()
+        try:
+            cur = conn.execute(
+                "UPDATE notifications SET status = 'declined' WHERE id = ? AND to_user_id = ? AND type = 'friend_request' AND status = 'pending'",
+                (notif_id, user_id),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+        finally:
+            conn.close()
+
+
+def remove_contact(user_id: int, contact_user_id: int) -> bool:
+    with _lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                "DELETE FROM contacts WHERE (user_id = ? AND contact_user_id = ?) OR (user_id = ? AND contact_user_id = ?)",
+                (user_id, contact_user_id, contact_user_id, user_id),
+            )
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+
+def list_contacts(user_id: int) -> list[dict]:
+    with _lock:
+        conn = _get_conn()
+        try:
+            from app.services.auth import get_user_by_id
+            rows = conn.execute(
+                "SELECT contact_user_id, created_at FROM contacts WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,),
+            ).fetchall()
+            result = []
+            for r in rows:
+                u = get_user_by_id(r["contact_user_id"])
+                if u:
+                    result.append({
+                        "id": u["id"],
+                        "username": u["username"],
+                        "role": u.get("role", "user"),
+                        "created_at": r["created_at"],
+                    })
             return result
         finally:
             conn.close()

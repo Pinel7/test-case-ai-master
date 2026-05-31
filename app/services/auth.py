@@ -4,7 +4,7 @@ import hashlib
 import os
 import secrets
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DB_DIR = Path.home() / ".TestCaseAI"
@@ -86,7 +86,7 @@ def authenticate_user(username: str, password: str) -> dict | None:
 
 def create_session(user_id: int) -> str:
     token = secrets.token_urlsafe(48)
-    expires_at = (datetime.utcnow() + timedelta(days=30)).isoformat()
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
     with _get_db() as db:
         db.execute("INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
                    (user_id, token, expires_at))

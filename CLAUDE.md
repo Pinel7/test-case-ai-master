@@ -15,6 +15,10 @@ python run.py
 python deploy/build_desktop.py
 
 # Docker build
+# Run tests
+python -m pytest tests/ -v
+
+# Docker build
 docker build -f deploy/Dockerfile -t test-case-ai .
 ```
 
@@ -27,7 +31,15 @@ docker build -f deploy/Dockerfile -t test-case-ai .
 ```
 ├── run.py                      # Entry: uvicorn.run("app.main:app")
 ├── app/
-│   ├── main.py                 # All FastAPI routes, exception handler, startup events
+│   ├── main.py                 # App factory, exception handler, startup events, router includes
+│   ├── deps.py                 # Shared dependencies (current_user, logger)
+│   ├── routes/
+│   │   ├── auth.py             # Auth, user settings, user search
+│   │   ├── generator.py        # Generate, stream, polish, RTM, script generation
+│   │   ├── library.py          # Library CRUD, folders, sharing
+│   │   ├── bugs.py             # Bug CRUD
+│   │   ├── query.py            # SQL query tool
+│   │   └── misc.py             # Export xlsx/csv, API proxy, review
 │   ├── models.py               # All Pydantic models (~30 request/response/enum models)
 │   ├── services/
 │   │   ├── generator.py        # LLM orchestration — DeepSeek + Anthropic, ~1050 lines
@@ -51,7 +63,7 @@ docker build -f deploy/Dockerfile -t test-case-ai .
 
 ### Route patterns
 
-All routes defined in `app/main.py` using lazy imports (`from app.services.X import Y` inside each handler). Routes fall into these groups:
+Routes split across `app/routes/` modules, each using `APIRouter`. All registered in `app/main.py` via `app.include_router()`. Shared dependencies (`current_user`, `logger`) in `app/deps.py`. Service imports still lazy (inside each handler). Route groups:
 
 | Group | Key routes | Backend |
 |-------|-----------|---------|

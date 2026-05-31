@@ -1,6 +1,0 @@
-.login-overlay-logo {
-    width: 72px; height: 72px; margin: 0 auto 20px;
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; color: #fff;
-}

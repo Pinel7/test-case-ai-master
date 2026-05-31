@@ -1,5 +1,0 @@
-.setup-actions .btn-ghost {
-    background: none; border: none;
-    color: var(--color-text-muted); font-size: 0.82rem;
-    cursor: pointer; transition: all .2s;
-}

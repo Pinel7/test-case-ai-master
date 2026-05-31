@@ -1,4 +1,0 @@
-.load-lib-meta {
-    font-size: 0.82rem; color: var(--color-text-secondary);
-    margin-bottom: 12px;
-}

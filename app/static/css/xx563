@@ -1,8 +1,0 @@
-.regex-common-btn small { display: block; color: var(--color-text-secondary); font-size: 0.72rem; }
-[data-theme="dark"] .regex-highlight-box .regex-hl { background: #665a00; }
-[data-theme="dark"] .regex-highlight-box .regex-hl-group { background: #1a3a6a; border-color: #2a5a8a; }
-[data-theme="dark"] .regex-group-table td { border-bottom-color: #2a2b36; }
-
-/* ============================
-   SQL QUERY TOOL
-   ============================ */

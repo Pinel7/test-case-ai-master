@@ -1,5 +1,0 @@
-.setup-provider-icon {
-    font-size: 1.5rem; color: var(--color-accent);
-    margin-bottom: 8px; position: relative;
-    display: inline-block;
-}

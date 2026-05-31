@@ -1,9 +1,0 @@
-.setup-api-key-row .btn-ghost {
-    background: var(--color-input-bg, #f5f5f5);
-    border: 1px solid var(--color-border);
-    border-radius: 8px; color: var(--color-text-muted);
-    padding: 0 12px;
-}
-[data-theme="dark"] .setup-api-key-row .btn-ghost {
-    background: rgba(255,255,255,.06);
-}

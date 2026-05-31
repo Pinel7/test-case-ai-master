@@ -1,1 +1,0 @@
-.diff-view { flex: 1; overflow-y: auto; padding: 16px; font-size: 0.84rem; line-height: 1.8; white-space: pre-wrap; }

@@ -1,5 +1,0 @@
-.setup-step {
-    display: flex; gap: 16px;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--color-border);
-}

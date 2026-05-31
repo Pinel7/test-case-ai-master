@@ -1,8 +1,0 @@
-.lib-item-icon {
-    font-size: 1.5rem; color: var(--color-accent);
-    width: 42px; height: 42px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--color-accent-light);
-    border-radius: 8px;
-    flex-shrink: 0;
-}

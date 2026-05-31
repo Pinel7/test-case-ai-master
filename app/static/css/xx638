@@ -1,1 +1,0 @@
-.bug-action-btn:hover { background: var(--color-bg); color: var(--color-accent); }

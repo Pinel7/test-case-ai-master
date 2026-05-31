@@ -1,4 +1,0 @@
-.login-overlay-box .btn-primary {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border: none;
-}

@@ -1,4 +1,0 @@
-.editor-container:has(.luckysheet-wrap) {
-    overflow: visible;
-}
-/* Override Luckysheet toolbar font for consistency */

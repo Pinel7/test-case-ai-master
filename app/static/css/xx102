@@ -1,3 +1,0 @@
-.export-info strong {
-    font-size: 1.4rem; color: var(--color-accent);
-}

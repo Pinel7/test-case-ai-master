@@ -1,8 +1,0 @@
-.report-ring-center {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--color-text);
-}

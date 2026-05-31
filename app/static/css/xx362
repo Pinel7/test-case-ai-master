@@ -1,5 +1,0 @@
-.dep-lib-back {
-    font-size: 0.8rem; color: var(--color-accent); cursor: pointer;
-    background: none; border: none; padding: 4px 0;
-    margin-bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
-}

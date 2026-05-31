@@ -1,3 +1,0 @@
-.home-card:hover {
-    box-shadow: var(--shadow-md);
-}

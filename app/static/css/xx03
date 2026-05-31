@@ -1,7 +1,0 @@
-.sidebar-brand {
-    padding: 28px 24px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-

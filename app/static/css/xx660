@@ -1,6 +1,0 @@
-.encoding-textarea[readonly] { background: #f8f9fc; }
-[data-theme="dark"] .encoding-textarea[readonly] { background: #1e1f29; }
-
-/* ============================
-   TIMESTAMP CONVERTER
-   ============================ */

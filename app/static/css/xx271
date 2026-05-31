@@ -1,7 +1,0 @@
-.template-menu-item {
-    display: block; width: 100%; text-align: left;
-    padding: 8px 14px; border: none; background: none;
-    font-size: 0.82rem; cursor: pointer;
-    color: var(--color-text); border-radius: 6px;
-    transition: all var(--transition);
-}

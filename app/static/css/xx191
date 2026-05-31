@@ -1,4 +1,0 @@
-.setup-overlay-header {
-    display: flex; justify-content: flex-end;
-    padding: 16px 20px 0;
-}

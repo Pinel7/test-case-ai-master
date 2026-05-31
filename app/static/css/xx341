@@ -1,3 +1,0 @@
-.lib-check-label { font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; }
-
-/* Checkbox wrapper on each item */

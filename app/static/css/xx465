@@ -1,1 +1,0 @@
-.drag-handle i { opacity: 0.4; transition: opacity var(--transition); }
