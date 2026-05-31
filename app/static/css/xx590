@@ -1,0 +1,1 @@
+.sql-results-table tbody tr:hover { background: #fafbff; }

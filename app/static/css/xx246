@@ -1,0 +1,27 @@
+.auth-error {
+    background: #fef2f2; color: #dc2626;
+    border: 1px solid #fecaca; border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 12px;
+    font-size: 0.82rem; text-align: center;
+}
+[data-theme="dark"] .auth-error {
+    background: #3b1010; color: #fca5a5;
+    border-color: #7f1d1d;
+}
+
+/* ============================
+   SCROLLBAR (global)
+   ============================ */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* ============================
+   DIFF VIEW
+   ============================ */

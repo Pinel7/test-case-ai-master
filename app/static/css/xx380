@@ -1,0 +1,10 @@
+.btn-load-cancel {
+    border: 1.5px solid var(--color-border);
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 0.82rem; font-weight: 500;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+}

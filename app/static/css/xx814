@@ -1,0 +1,11 @@
+.home-quick-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 16px 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: center;
+}

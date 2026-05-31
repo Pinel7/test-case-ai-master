@@ -1,0 +1,9 @@
+#confirmModalInput { text-align: center; font-size: 1rem; }
+[data-theme="dark"] #confirmModal .modal-content { background: var(--color-card); }
+[data-theme="dark"] #confirmModal .modal-header,
+[data-theme="dark"] #confirmModal .modal-footer { border-color: var(--color-border); }
+#confirmModal.modal { z-index: 2050; }
+
+/* ============================
+   REPORT PAGE
+   ============================ */

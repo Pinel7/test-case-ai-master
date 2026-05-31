@@ -1,0 +1,1 @@
+.lib-item:hover { border-color: var(--color-accent); background: var(--color-accent-light); }

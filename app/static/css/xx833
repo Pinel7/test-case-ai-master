@@ -1,0 +1,7 @@
+.home-settings-save-status {
+    text-align: center;
+    padding: 8px 20px 12px;
+    font-size: 0.72rem;
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+}

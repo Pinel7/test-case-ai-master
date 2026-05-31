@@ -1,0 +1,1 @@
+.rtm-table .rtm-case-link { color: var(--color-accent); text-decoration: none; font-family: "SF Mono", monospace; font-size: 0.78rem; cursor: pointer; }

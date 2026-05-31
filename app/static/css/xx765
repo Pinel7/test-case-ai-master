@@ -1,0 +1,9 @@
+.api-test-response .json-bool { color: #0000ff; }
+[data-theme="dark"] .api-test-response .json-key { color: #ce91d8; }
+[data-theme="dark"] .api-test-response .json-string { color: #6aab73; }
+[data-theme="dark"] .api-test-response .json-number { color: #b5cea8; }
+[data-theme="dark"] .api-test-response .json-bool { color: #569cd6; }
+
+/* ============================
+   SCRIPT GENERATION PAGE
+   ============================ */

@@ -1,0 +1,1 @@
+.md-preview code { background: var(--color-bg); padding: 1px 5px; border-radius: 3px; font-size: 0.82rem; font-family: "SF Mono", "Consolas", monospace; }

@@ -1,0 +1,6 @@
+.api-settings-help {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.78rem; color: var(--color-text-secondary);
+    line-height: 1.6;
+}

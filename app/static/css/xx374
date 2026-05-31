@@ -1,0 +1,4 @@
+.load-lib-icon.warning {
+    background: #fff3e0;
+    color: #e65100;
+}

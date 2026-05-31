@@ -1,0 +1,8 @@
+.search-box input {
+    border: none; outline: none; background: transparent;
+    font-size: 0.82rem; width: 150px;
+}
+
+/* ============================
+   EXPORT PAGE
+   ============================ */

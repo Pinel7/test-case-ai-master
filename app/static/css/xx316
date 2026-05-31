@@ -1,0 +1,1 @@
+.tree-item:hover { background: var(--sidebar-hover-bg, #f0f1f5); }

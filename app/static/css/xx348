@@ -1,0 +1,4 @@
+.dep-tabs-link.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}

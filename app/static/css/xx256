@@ -1,0 +1,12 @@
+.batch-bar .batch-menu-btn {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    color: #c8c9d4;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition);
+    display: flex; align-items: center; gap: 4px;
+}

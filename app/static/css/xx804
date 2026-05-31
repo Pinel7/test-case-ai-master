@@ -1,0 +1,1 @@
+.home-card-label { font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 2px; }

@@ -1,0 +1,7 @@
+.tree-toggle {
+    width: 14px; height: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; color: var(--color-text-secondary);
+    transition: transform .15s ease;
+    flex-shrink: 0;
+}

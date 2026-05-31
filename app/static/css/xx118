@@ -1,0 +1,5 @@
+#detailModal .form-control, #detailModal .form-select { font-size: 0.85rem; }
+
+/* ============================
+   ONLINE EDITOR
+   ============================ */

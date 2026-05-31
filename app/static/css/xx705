@@ -1,0 +1,1 @@
+.input-tab.active { background: var(--color-accent); color: #fff; }

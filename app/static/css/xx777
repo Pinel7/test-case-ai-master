@@ -1,0 +1,4 @@
+#sidebar.sidebar-collapsed .sidebar-collapse-btn {
+    left: 48px;
+    transform: rotate(180deg);
+}

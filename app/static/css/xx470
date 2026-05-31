@@ -1,0 +1,1 @@
+#confirmModal .modal-footer .btn { min-width: 90px; }

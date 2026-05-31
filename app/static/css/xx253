@@ -1,0 +1,10 @@
+.batch-bar .batch-count {
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-accent);
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+

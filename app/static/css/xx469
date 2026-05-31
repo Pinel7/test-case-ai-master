@@ -1,0 +1,1 @@
+#confirmModal .modal-body p { font-size: 0.95rem; color: var(--color-text); margin: 8px 0; }

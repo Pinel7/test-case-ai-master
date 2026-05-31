@@ -1,0 +1,1 @@
+.tree-item:hover .tree-link { opacity: 0.6; }

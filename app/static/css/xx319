@@ -1,0 +1,1 @@
+.tree-toggle.collapsed i { transform: rotate(-90deg); }

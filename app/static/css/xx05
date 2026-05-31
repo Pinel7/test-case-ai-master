@@ -1,0 +1,2 @@
+.sidebar-logo i { font-size: 1.3rem; color: var(--sidebar-logo-color); }
+

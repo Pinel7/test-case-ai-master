@@ -1,0 +1,5 @@
+.library-layout {
+    display: flex;
+    min-height: 440px;
+    max-height: 65vh;
+}

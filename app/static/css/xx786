@@ -1,0 +1,3 @@
+#sidebar.sidebar-collapsed .sidebar-logo i {
+    font-size: 1.1rem;
+}

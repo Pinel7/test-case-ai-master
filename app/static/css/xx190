@@ -1,0 +1,13 @@
+.setup-overlay-inner {
+    position: relative;
+    width: 100%; max-width: 640px;
+    margin: 40px auto 60px;
+    background: var(--color-card-bg, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.3);
+    overflow: hidden;
+}
+[data-theme="dark"] .setup-overlay-inner {
+    background: #1a1a2e;
+    box-shadow: 0 24px 80px rgba(0,0,0,.5);
+}

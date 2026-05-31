@@ -1,0 +1,7 @@
+.auth-tabs-link {
+    display: block; padding: 10px 20px;
+    cursor: pointer; font-weight: 600; font-size: 0.9rem;
+    color: var(--sidebar-text-muted); border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: all var(--transition);
+    user-select: none;
+}

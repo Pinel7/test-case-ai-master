@@ -1,0 +1,2 @@
+.login-overlay-logo i { position: relative; z-index: 1; }
+

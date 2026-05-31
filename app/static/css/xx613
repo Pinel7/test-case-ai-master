@@ -1,0 +1,6 @@
+.env-insert-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 32px; }
+[data-theme="dark"] .env-card { background: var(--color-surface); border-color: var(--color-border); }
+
+/* ============================
+   BUG MANAGEMENT
+   ============================ */

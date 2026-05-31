@@ -1,0 +1,7 @@
+.lib-subfolder-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--color-accent-light, rgba(79,70,229,.1));
+    border-radius: 8px;
+    flex-shrink: 0;
+}

@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestCaseAI</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='2' width='14' height='12' rx='2' fill='%234f46e5'/><path d='M4.5 8l2.5 2.5 4.5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/app.css?v=31" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- ==================== LOGIN OVERLAY ==================== -->
+<div id="loginOverlay">
+    <div class="login-bg-shapes">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="login-overlay-content">
+        <div class="login-overlay-brand">
+            <div class="login-overlay-logo">
+                <div class="login-overlay-logo-bg"></div>
+                <i class="bi bi-clipboard-check"></i>
+            </div>
+            <h1>TestCase<span>AI</span></h1>
+            <p class="login-overlay-subtitle">智能测试用例生成器</p>
+        </div>
+        <div class="login-overlay-box">
+            <ul class="auth-tabs-nav">
+                <li class="auth-tabs-item"><span class="auth-tabs-link active" data-amode="login">登录</span></li>
+                <li class="auth-tabs-item"><span class="auth-tabs-link" data-amode="register">注册</span></li>
+            </ul>
+            <div id="olFormLogin">
+                <div class="mb-3">
+                    <label class="form-label">用户名</label>
+                    <input type="text" id="olLoginUsername" class="form-control" placeholder="输入用户名" autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">密码</label>
+                    <input type="password" id="olLoginPassword" class="form-control" placeholder="输入密码" autocomplete="current-password">
+                </div>
+                <div class="auth-error" id="olLoginError" style="display:none;"></div>
+                <button class="btn btn-primary w-100" id="btnOlLogin"><i class="bi bi-box-arrow-in-right me-1"></i> 登录</button>
+            </div>
+            <div id="olFormRegister" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">用户名</label>
+                    <input type="text" id="olRegUsername" class="form-control" placeholder="至少3个字符" autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">密码</label>
+                    <input type="password" id="olRegPassword" class="form-control" placeholder="至少6个字符" autocomplete="new-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">确认密码</label>
+                    <input type="password" id="olRegConfirm" class="form-control" placeholder="再次输入密码">
+                </div>
+                <div class="auth-error" id="olRegError" style="display:none;"></div>
+                <button class="btn btn-success w-100" id="btnOlRegister"><i class="bi bi-person-plus me-1"></i> 注册</button>
+            </div>
+        </div>
+        <div class="login-overlay-footer">
+            <small>由 DeepSeek &amp; Claude 驱动</small>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== SETUP GUIDE OVERLAY ==================== -->
+<div id="setupOverlay" style="display:none;">
+    <div class="setup-overlay-bg"></div>
+    <div class="setup-overlay-inner">
+        <div class="setup-overlay-header">
+            <button class="setup-close" id="btnSetupClose" title="关闭引导（稍后可在侧边栏底部 ? 按钮重新打开）"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="setup-steps">
+            <!-- Step 1 -->
+            <div class="setup-step">
+                <div class="setup-step-num">1</div>
+                <div class="setup-step-body">
+                    <h3>获取 API Key</h3>
+                    <p>本工具通过调用大语言模型 API 生成测试用例，您需要先申请一个 API Key。</p>
+                    <div class="setup-providers">
+                        <div class="setup-provider">
+                            <div class="setup-provider-icon"><span class="setup-provider-badge">推荐</span><i class="bi bi-robot"></i></div>
+                            <div class="setup-provider-name">DeepSeek</div>
+                            <div class="setup-provider-desc">性价比高，中文理解强，注册即送额度</div>
+                            <a href="https://platform.deepseek.com/api_keys" target="_blank" class="btn btn-sm btn-outline-light w-100">去 DeepSeek 申请 <i class="bi bi-box-arrow-up-right ms-1"></i></a>
+                        </div>
+                        <div class="setup-provider">
+                            <div class="setup-provider-icon"><i class="bi bi-lightning-charge"></i></div>
+                            <div class="setup-provider-name">Anthropic Claude</div>
+                            <div class="setup-provider-desc">更强大的生成能力，适合复杂需求</div>
+                            <a href="https://console.anthropic.com/keys" target="_blank" class="btn btn-sm btn-outline-light w-100">去 Anthropic 申请 <i class="bi bi-box-arrow-up-right ms-1"></i></a>
+                        </div>
+                    </div>
+                    <details class="setup-details">
+                        <summary>详细注册步骤（以 DeepSeek 为例）</summary>
+                        <ol class="setup-details-ol">
+                            <li>点击上方按钮，打开 <strong>platform.deepseek.com</strong></li>
+                            <li>点击右上角 <strong>「Sign Up / 注册」</strong>，用邮箱注册账号</li>
+                            <li>登录后进入 <strong>「API Keys」</strong> 页面</li>
+                            <li>点击 <strong>「创建 API Key」</strong>，复制生成的 Key（格式如 <code>sk-xxxxxxxxxxxx</code>）</li>
+                            <li>新用户通常有 <strong>¥5~10 免费额度</strong>，足够生成数百个测试用例</li>
+                        </ol>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="setup-step">
+                <div class="setup-step-num">2</div>
+                <div class="setup-step-body">
+                    <h3>填入 API Key</h3>
+                    <p>将上一步获取的 Key 粘贴到下方输入框，系统会自动保存。</p>
+                    <div class="setup-api-key-row">
+                        <input type="password" id="setupApiKeyInput" class="form-control" placeholder="粘贴你的 API Key，如 sk-xxxxxxxxxxxx">
+                        <button class="btn btn-ghost" id="btnSetupToggleKey" title="显示/隐藏"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="setup-test-row">
+                        <button class="btn btn-accent" id="btnSetupTestKey"><i class="bi bi-plugin"></i> 测试连接</button>
+                        <span id="setupTestResult"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="setup-step">
+                <div class="setup-step-num">3</div>
+                <div class="setup-step-body">
+                    <h3>选择模型</h3>
+                    <p>根据你的需求选择合适的模型：</p>
+                    <div class="setup-models">
+                        <label class="setup-model" data-model="deepseek-chat">
+                            <input type="radio" name="setupModel" value="deepseek-chat" checked>
+                            <div class="setup-model-body">
+                                <strong>DeepSeek-Chat</strong>
+                                <small>默认模型，速度快，性价比高，中文友好</small>
+                            </div>
+                        </label>
+                        <label class="setup-model" data-model="deepseek-reasoner">
+                            <input type="radio" name="setupModel" value="deepseek-reasoner">
+                            <div class="setup-model-body">
+                                <strong>DeepSeek-Reasoner</strong>
+                                <small>深度推理，对复杂需求分析更全面（速度较慢）</small>
+                            </div>
+                        </label>
+                        <label class="setup-model" data-model="claude-sonnet-4-20250514">
+                            <input type="radio" name="setupModel" value="claude-sonnet-4-20250514">
+                            <div class="setup-model-body">
+                                <strong>Claude Sonnet 4</strong>
+                                <small>均衡性能，适合大多数测试场景</small>
+                            </div>
+                        </label>
+                        <label class="setup-model" data-model="claude-opus-4-20250514">
+                            <input type="radio" name="setupModel" value="claude-opus-4-20250514">
+                            <div class="setup-model-body">
+                                <strong>Claude Opus 4</strong>
+                                <small>最强能力，适合高复杂度需求（需要 Anthropic Key）</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="setup-step">
+                <div class="setup-step-num">4</div>
+                <div class="setup-step-body">
+                    <h3>快速上手</h3>
+                    <p>配置完成！以下是几个快速开始的建议：</p>
+                    <ul class="setup-tips">
+                        <li><i class="bi bi-1-circle"></i> 在左侧「需求编辑」页面粘贴需求文档，点击「生成用例」</li>
+                        <li><i class="bi bi-2-circle"></i> 使用「AI 润色」按钮整理混乱的需求文档</li>
+                        <li><i class="bi bi-3-circle"></i> 生成的用例可编辑、筛选、批量导出为 Excel/CSV</li>
+                        <li><i class="bi bi-4-circle"></i> 点击「保存到用例库」存档，方便日后复用</li>
+                        <li><i class="bi bi-5-circle"></i> 使用「RTM 追溯」分析需求覆盖率</li>
+                    </ul>
+                    <div class="setup-actions">
+                        <button class="btn btn-accent" id="btnSetupDone"><i class="bi bi-check-lg me-1"></i> 开始使用</button>
+                        <button class="btn btn-ghost" id="btnSetupSkip">暂时跳过，我自己摸索</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<aside id="sidebar">
+    <div class="sidebar-brand">
+        <div class="sidebar-logo"><i class="bi bi-clipboard-check"></i></div>
+        <div class="sidebar-title">TestCase<span>AI</span></div>
+    </div>
+    <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="home" title="主页 — API Key 状态、快捷入口、设置">
+            <i class="bi bi-house-door"></i>
+            <span>主页</span>
+        </a>
+        <a class="nav-item" data-page="input" title="输入需求文档、AI润色、选择导出字段">
+            <i class="bi bi-journal-text"></i>
+            <span>需求编辑</span>
+        </a>
+        <a class="nav-item" data-page="cases" title="生成、编辑、筛选测试用例">
+            <i class="bi bi-grid-3x3-gap"></i>
+            <span>用例管理</span>
+        </a>
+        <a class="nav-item" data-page="report" title="统计分析与报告导出">
+            <i class="bi bi-bar-chart"></i>
+            <span>测试报告</span>
+        </a>
+        <a class="nav-item" data-page="rtm" title="需求追溯矩阵，分析需求覆盖率">
+            <i class="bi bi-diagram-3"></i>
+            <span>RTM 追溯</span>
+        </a>
+
+        <div class="nav-section">工具</div>
+
+        <a class="nav-item" data-page="toolkit" title="编码转换、时间戳、密码/UUID生成">
+            <i class="bi bi-tools"></i>
+            <span>工具集</span>
+        </a>
+        <a class="nav-item" data-page="apitest" title="HTTP接口请求测试">
+            <i class="bi bi-hdd-rack"></i>
+            <span>API 测试</span>
+        </a>
+        <a class="nav-item" data-page="script" title="生成Playwright自动化脚本">
+            <i class="bi bi-file-code"></i>
+            <span>脚本生成</span>
+        </a>
+        <a class="nav-item" data-page="formatter" title="JSON/XML格式化、对比">
+            <i class="bi bi-json"></i>
+            <span>JSON / XML</span>
+        </a>
+        <a class="nav-item" data-page="regex" title="正则表达式匹配测试">
+            <i class="bi bi-asterisk"></i>
+            <span>正则测试</span>
+        </a>
+        <a class="nav-item" data-page="sql" title="SQL查询与数据分析">
+            <i class="bi bi-database"></i>
+            <span>SQL 查询</span>
+        </a>
+        <a class="nav-item" data-page="env" title="多环境配置管理">
+            <i class="bi bi-gear-wide-connected"></i>
+            <span>环境配置</span>
+        </a>
+        <a class="nav-item" data-page="bugreport" title="生成Jira/GitHub/Markdown格式Bug报告">
+            <i class="bi bi-bug"></i>
+            <span>Bug 导出</span>
+        </a>
+        <a class="nav-item" data-page="export" title="导出到Excel或CSV">
+            <i class="bi bi-box-arrow-down"></i>
+            <span>数据导出</span>
+        </a>
+        <a class="nav-item" data-page="editor" title="在线文本/表格/文档编辑器">
+            <i class="bi bi-file-earmark-code"></i>
+            <span>编辑器</span>
+        </a>
+    </nav>
+    <button class="sidebar-collapse-btn" id="btnCollapseSidebar" title="收起侧边栏">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <div class="sidebar-footer">
+        <div class="sidebar-user-avatar" id="sidebarUserAvatar"><i class="bi bi-person-circle"></i></div>
+        <div class="sidebar-user-info" id="sidebarUserInfo">
+            <small id="sidebarUserName">未登录</small>
+        </div>
+        <button class="sidebar-auth-btn" id="btnAuth" title="登录/注册"><i class="bi bi-box-arrow-in-right"></i></button>
+        <button class="sidebar-auth-btn" id="btnLogout" title="退出登录" style="display:none;"><i class="bi bi-box-arrow-right"></i></button>
+        <button class="sidebar-auth-btn" id="btnSetupGuide" title="配置引导" style="display:none;"><i class="bi bi-question-circle"></i></button>
+        <button class="theme-toggle" id="btnThemeToggle" title="切换明暗主题"><i class="bi bi-moon-stars"></i></button>
+    </div>
+</aside>
+
+<main id="mainContent">
+
+    <!-- ==================== PAGE: 主页 ==================== -->
+    <section class="content-page active" id="page-home">
+        <div class="page-hero">
+            <h2>主页 <small>账号概览、API Key 状态、快捷入口</small></h2>
+        </div>
+
+        <div class="home-grid">
+            <div class="home-card home-card-user">
+                <div class="home-card-icon"><i class="bi bi-person-circle"></i></div>
+                <div class="home-card-body">
+                    <div class="home-card-label">当前用户</div>
+                    <div class="home-card-value" id="homeUsername">未登录</div>
+                </div>
+            </div>
+            <div class="home-card home-card-key" id="homeApiKeyCard">
+                <div class="home-card-icon"><i class="bi bi-key"></i></div>
+                <div class="home-card-body">
+                    <div class="home-card-label">API Key</div>
+                    <div class="home-card-value" id="homeApiKeyStatus">
+                        <span class="home-status-dot status-off"></span> 未配置
+                    </div>
+                    <div class="home-card-sub" id="homeApiKeyHint">前往「需求编辑」页面设置</div>
+                </div>
+            </div>
+            <div class="home-card home-card-model">
+                <div class="home-card-icon"><i class="bi bi-cpu"></i></div>
+                <div class="home-card-body">
+                    <div class="home-card-label">当前模型</div>
+                    <div class="home-card-value" id="homeModel">deepseek-chat</div>
+                    <div class="home-card-sub" id="homeModelHint">可在页面顶部切换</div>
+                </div>
+            </div>
+            <div class="home-card home-card-stats">
+                <div class="home-card-icon"><i class="bi bi-grid-3x3-gap"></i></div>
+                <div class="home-card-body">
+                    <div class="home-card-label">当前用例数</div>
+                    <div class="home-card-value" id="homeCaseCount">0</div>
+                    <div class="home-card-sub" id="homeCaseHint">生成或导入用例后更新</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="home-section">
+            <div class="home-section-title">快捷操作</div>
+            <div class="home-quick-actions">
+                <button class="home-quick-btn" data-page="input">
+                    <i class="bi bi-journal-text"></i>
+                    <span>需求编辑</span>
+                    <small>粘贴需求文档并生成用例</small>
+                </button>
+                <button class="home-quick-btn" data-page="cases">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span>用例管理</span>
+                    <small>编辑、筛选、批量操作</small>
+                </button>
+                <button class="home-quick-btn" data-page="report">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>测试报告</span>
+                    <small>统计分布与报告导出</small>
+                </button>
+                <button class="home-quick-btn" data-page="export">
+                    <i class="bi bi-box-arrow-down"></i>
+                    <span>数据导出</span>
+                    <small>导出为 Excel 或 CSV</small>
+                </button>
+                <button class="home-quick-btn" id="homeBtnOpenLib">
+                    <i class="bi bi-collection"></i>
+                    <span>用例库</span>
+                    <small>浏览已保存的用例集</small>
+                </button>
+                <button class="home-quick-btn" data-page="apitest">
+                    <i class="bi bi-hdd-rack"></i>
+                    <span>API 测试</span>
+                    <small>发送 HTTP 请求并查看响应</small>
+                </button>
+            </div>
+        </div>
+
+        <div class="home-section" id="homeUsageSection" style="display:none;">
+            <div class="home-section-title">Token 用量</div>
+            <div class="home-card home-card-usage">
+                <div class="home-card-icon"><i class="bi bi-currency-dollar"></i></div>
+                <div class="home-card-body">
+                    <div class="home-card-label">本会话累计 Token</div>
+                    <div class="home-card-value" id="homeTokenCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="home-section">
+            <div class="home-section-title">设置</div>
+            <div class="home-settings-card">
+                <div class="home-settings-item">
+                    <div class="home-settings-item-icon"><i class="bi bi-key"></i></div>
+                    <div class="home-settings-item-body">
+                        <div class="home-settings-item-label">API Key</div>
+                        <div class="home-settings-item-desc" id="homeKeyDesc">用于调用大语言模型生成测试用例</div>
+                    </div>
+                    <div class="home-settings-item-control">
+                        <div class="home-key-row">
+                            <input type="password" id="homeApiKeyInput" class="form-control form-control-sm" placeholder="sk-...">
+                            <button class="btn btn-ghost btn-sm" id="homeBtnToggleKey" title="显示/隐藏"><i class="bi bi-eye"></i></button>
+                        </div>
+                        <div class="home-key-actions">
+                            <button class="btn btn-sm btn-accent" id="homeBtnTestKey"><i class="bi bi-plugin"></i> 测试连接</button>
+                            <span id="homeKeyTestResult" class="home-key-test-result"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="home-settings-divider"></div>
+                <div class="home-settings-item">
+                    <div class="home-settings-item-icon"><i class="bi bi-cpu"></i></div>
+                    <div class="home-settings-item-body">
+                        <div class="home-settings-item-label">模型选择</div>
+                        <div class="home-settings-item-desc">选择用于生成用例的 AI 模型</div>
+                    </div>
+                    <div class="home-settings-item-control">
+                        <select id="homeModelSelect" class="form-select form-select-sm" style="width:200px;">
+                            <option value="deepseek-chat">DeepSeek-Chat</option>
+                            <option value="deepseek-reasoner">DeepSeek-Reasoner</option>
+                            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+                            <option value="claude-haiku-4-20250514">Claude Haiku 4</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="home-settings-divider"></div>
+                <div class="home-settings-item">
+                    <div class="home-settings-item-icon"><i class="bi bi-palette"></i></div>
+                    <div class="home-settings-item-body">
+                        <div class="home-settings-item-label">主题</div>
+                        <div class="home-settings-item-desc">切换明暗主题</div>
+                    </div>
+                    <div class="home-settings-item-control">
+                        <button class="btn btn-sm btn-outline" id="homeBtnTheme"><i class="bi bi-moon-stars"></i> <span id="homeThemeLabel">暗色模式</span></button>
+                    </div>
+                </div>
+                <div class="home-settings-save-status" id="homeSaveStatus">
+                    <i class="bi bi-check-circle"></i> <span id="homeSaveStatusText">设置已自动保存</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Global error alert (visible from any page) -->
+    <div id="errorArea" class="alert alert-danger" role="alert" style="display:none; position:sticky; top:0; z-index:50;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span id="errorMessage"></span>
+        <button class="btn btn-sm btn-outline-danger ms-auto" id="btnRetry">重试</button>
+        <button class="btn-close ms-2" id="btnDismissError"></button>
+    </div>
+
+    <!-- ==================== PAGE: 需求编辑 ==================== -->
+    <section class="content-page" id="page-input">
+        <div class="page-hero">
+            <h2>需求编辑 <small>粘贴需求文档，AI自动润色，灵活选择导出字段</small></h2>
+        </div>
+
+        <!-- Top toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="model-picker">
+                    <i class="bi bi-cpu"></i>
+                    <select id="modelSelect" class="form-select form-select-sm">
+                        <option value="deepseek-chat">DeepSeek-Chat</option>
+                        <option value="deepseek-reasoner">DeepSeek-Reasoner</option>
+                        <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                        <option value="claude-opus-4-20250514">Claude Opus 4</option>
+                        <option value="claude-haiku-4-20250514">Claude Haiku 4</option>
+                    </select>
+                </div>
+                <div class="model-picker ms-2">
+                    <i class="bi bi-123"></i>
+                    <select id="caseCountSelect" class="form-select form-select-sm">
+                        <option value="0">智能判断</option>
+                        <option value="3">3 条</option>
+                        <option value="5">5 条</option>
+                        <option value="8">8 条</option>
+                        <option value="10" selected>10 条</option>
+                        <option value="12">12 条</option>
+                        <option value="15">15 条</option>
+                        <option value="20">20 条</option>
+                        <option value="25">25 条</option>
+                        <option value="30">30 条</option>
+                        <option value="-1">自定义...</option>
+                    </select>
+                    <input type="number" id="caseCountCustom" class="form-control form-control-sm" min="1" max="200" value="10" style="display:none;width:80px;">
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn btn-accent btn-sm" id="btnPolish"><i class="bi bi-stars"></i> AI 润色</button>
+                <button class="btn btn-outline btn-sm" id="btnPolishedUse" style="display:none;"><i class="bi bi-check-circle"></i> 采用润色</button>
+                <div class="toolbar-more dropdown">
+                    <button class="btn btn-ghost btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" id="btnApiSettings"><i class="bi bi-gear"></i> API 设置<span class="api-warn-dot" id="apiWarnDot" style="display:none;" title="未配置 API Key"></span></a></li>
+                        <li><a class="dropdown-item" id="btnSample"><i class="bi bi-lightbulb"></i> 插入示例</a></li>
+                        <li><a class="dropdown-item" id="btnClear"><i class="bi bi-eraser"></i> 清空</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><span class="dropdown-item-text"><span class="token-counter" id="tokenCounter" style="display:none;"><i class="bi bi-currency-dollar"></i> <strong id="tokenTotal">0</strong> tokens</span></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Settings panel -->
+        <div class="api-settings" id="apiSettingsPanel" style="display:none;">
+            <div class="api-settings-row">
+                <div class="api-field">
+                    <label>API Key <small>（优先使用，留空则用环境变量）</small></label>
+                    <div class="api-key-input">
+                        <input type="password" id="apiKeyInput" class="form-control form-control-sm" placeholder="sk-...">
+                        <button class="btn btn-ghost btn-sm" id="btnToggleApiKey" title="显示/隐藏"><i class="bi bi-eye"></i></button>
+                    </div>
+                </div>
+                <div class="api-field">
+                    <label>自定义模型 <small>（填写后覆盖上方模型选择）</small></label>
+                    <input type="text" id="customModelInput" class="form-control form-control-sm" placeholder="例如：gpt-4o、自定义端点模型名">
+                </div>
+            </div>
+            <div class="api-settings-help">
+                <i class="bi bi-info-circle"></i> 还没有 API Key？免费注册即可获取：
+                <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek<i class="bi bi-box-arrow-up-right ms-1"></i></a>
+                <span class="mx-1">·</span>
+                <a href="https://console.anthropic.com/keys" target="_blank">Anthropic<i class="bi bi-box-arrow-up-right ms-1"></i></a>
+                <br><small class="text-muted">各平台独立计费，按使用量扣费。填入 Key 后所有请求均使用您自己的账户。</small>
+            </div>
+        </div>
+
+        <!-- Main input + polish split -->
+        <div class="split-panel">
+            <div class="split-left">
+                <div class="panel-label">
+                    <span class="input-tabs">
+                        <span class="input-tab active" data-itab="edit">编辑</span>
+                        <span class="input-tab" data-itab="preview">预览</span>
+                    </span>
+                    <small id="charCounter">0 / 150,000</small>
+                    <span id="autoSaveDot" class="auto-save-dot" title="已自动保存">已保存</span>
+                </div>
+                <textarea id="requirementText" placeholder="在此粘贴需求文档（PRD、用户故事、API 文档、验收标准等）..."
+                    maxlength="150000"></textarea>
+                <div id="mdPreview" class="md-preview" style="display:none;"></div>
+            </div>
+            <div class="split-right" id="polishPanel">
+                <div class="panel-label">
+                    润色结果
+                    <span class="badge-pill" id="polishBadge" style="display:none;">已完成</span>
+                    <small id="polishNewLen" class="text-muted"></small>
+                </div>
+                <div class="polish-content" id="polishResult">点击上方 <strong>AI 润色</strong> 按钮，AI 将把原始文档整理为格式清晰、条理分明的结构化需求文档。</div>
+                <div class="polish-actions" id="polishActions" style="display:none;">
+                    <button class="btn btn-ghost btn-sm" id="btnCopyPolished"><i class="bi bi-copy"></i> 复制</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field picker -->
+        <div class="section-title mt-4 mb-2">导出字段</div>
+        <div class="field-chips" id="fieldChips"></div>
+        <div class="field-actions mt-2">
+            <button class="btn btn-link btn-sm" id="btnSelectAll">全选</button>
+            <button class="btn btn-link btn-sm" id="btnDeselectAll">取消</button>
+            <span class="text-muted small ms-2">已选 <strong id="selectedCount">0</strong></span>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 用例管理 ==================== -->
+    <section class="content-page" id="page-cases">
+        <div class="page-hero">
+            <h2>用例管理 <small>生成、编辑、筛选测试用例</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-primary" id="btnGenerate"><i class="bi bi-magic"></i> 生成测试用例</button>
+                <button class="btn btn-outline" id="btnImport"><i class="bi bi-upload"></i> 导入用例</button>
+                <button class="btn btn-outline" id="btnSaveToLib" style="display:none;"><i class="bi bi-archive"></i> 保存到库</button>
+                <button class="btn btn-ghost" id="btnDataGen"><i class="bi bi-dice"></i> 测试数据</button>
+                <button class="btn btn-ghost" id="btnOpenLib"><i class="bi bi-collection"></i> 用例库</button>
+                <button class="btn btn-ghost has-dropdown" id="btnTemplate"><i class="bi bi-lightbulb"></i> 模板
+                    <div class="template-menu" id="templateMenu"></div>
+                </button>
+            </div>
+        </div>
+
+        <div id="loadingArea" class="loading-block" style="display:none;">
+            <div class="spinner"></div>
+            <p id="loadingMessage">正在分析需求文档...</p>
+            <div class="loading-footer">
+                <small id="loadingElapsed" class="text-muted">已等待 0s</small>
+                <button class="btn btn-sm btn-outline-danger" id="btnCancelGenerate"><i class="bi bi-x-circle me-1"></i>取消</button>
+            </div>
+        </div>
+
+        <div id="resultsArea" style="display:none;">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <span class="badge bg-primary" id="caseCount">0</span> 条用例
+                </div>
+                <div class="toolbar-right">
+                    <div class="search-box" title="在所有字段中搜索（标题、步骤、模块等）">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="filterInput" placeholder="搜索所有字段...">
+                    </div>
+                    <select id="filterPriority" class="form-select form-select-sm" style="width:auto;">
+                        <option value="">全部优先级</option>
+                        <option value="P0">P0</option>
+                        <option value="P1">P1</option>
+                        <option value="P2">P2</option>
+                        <option value="P3">P3</option>
+                    </select>
+                    <select id="filterReview" class="form-select form-select-sm" style="width:auto;">
+                        <option value="">全部评审状态</option>
+                        <option value="draft">草稿</option>
+                        <option value="pending_review">待评审</option>
+                        <option value="approved">已通过</option>
+                        <option value="needs_changes">需修改</option>
+                    </select>
+                    <select id="filterExec" class="form-select form-select-sm" style="width:auto;">
+                        <option value="">全部执行状态</option>
+                        <option value="not_executed">未执行</option>
+                        <option value="pass">通过</option>
+                        <option value="fail">失败</option>
+                        <option value="blocked">阻塞</option>
+                    </select>
+                    <button class="btn btn-ghost btn-sm" id="btnDuplicate"><i class="bi bi-copy"></i> 复制</button>
+                    <button class="btn btn-ghost btn-sm" id="btnDeleteSelected"><i class="bi bi-trash"></i> 删除</button>
+                    <button class="btn btn-accent btn-sm" id="btnAddRow"><i class="bi bi-plus-lg"></i> 添加</button>
+                    <div class="btn-group btn-group-sm ms-1" id="viewToggle">
+                        <button class="btn btn-outline-secondary active" data-view="list" title="列表视图"><i class="bi bi-list-ul"></i></button>
+                        <button class="btn btn-outline-secondary" data-view="card" title="卡片视图"><i class="bi bi-grid"></i></button>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" id="btnVersionHistory" title="查看历史版本对比"><i class="bi bi-clock-history"></i></button>
+                </div>
+            </div>
+            <div class="tag-cloud" id="tagCloud" style="display:none;">
+                <span class="tag-cloud-label">标签筛选：</span>
+                <span class="tag-cloud-item active" data-tag="">全部</span>
+            </div>
+            <div class="batch-bar" id="batchBar">
+                <span class="batch-count" id="batchCount">0</span>
+                <span id="batchLabel">项已选</span>
+                <span class="batch-divider"></span>
+                <div class="batch-drop" id="batchDropPriority"><button class="batch-menu-btn">优先级 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <div class="batch-drop" id="batchDropCategory"><button class="batch-menu-btn">类型 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <div class="batch-drop" id="batchDropMethod"><button class="batch-menu-btn">方法 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <div class="batch-drop" id="batchDropLevel"><button class="batch-menu-btn">级别 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <div class="batch-drop" id="batchDropReview"><button class="batch-menu-btn">评审 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <div class="batch-drop" id="batchDropExec"><button class="batch-menu-btn">执行 <i class="bi bi-chevron-up"></i></button><div class="batch-menu"></div></div>
+                <span class="batch-divider"></span>
+                <button class="batch-menu-btn" id="btnBatchDep"><i class="bi bi-link-45deg"></i> 设置依赖</button>
+                <span class="batch-divider"></span>
+                <div class="batch-drop" id="batchDropEdit"><button class="batch-menu-btn" id="btnBatchEditMain"><i class="bi bi-pencil"></i> 编辑 <i class="bi bi-chevron-up"></i></button>
+                    <div class="batch-menu" id="batchEditMenu" style="min-width:140px;">
+                        <div class="batch-menu-group">批量编辑</div>
+                        <button class="batch-menu-item" data-action="append"><i class="bi bi-plus-circle me-1"></i> 追加内容</button>
+                        <button class="batch-menu-item" data-action="replace"><i class="bi bi-arrow-repeat me-1"></i> 查找替换</button>
+                        <button class="batch-menu-item" data-action="fill"><i class="bi bi-123 me-1"></i> 填充序号</button>
+                    </div>
+                </div>
+                <span class="batch-divider"></span>
+                <button class="batch-menu-btn" id="btnBatchExport"><i class="bi bi-download"></i> 导出选中</button>
+                <button class="batch-menu-btn" id="btnBatchDelete"><i class="bi bi-trash3"></i> 删除</button>
+                <button class="btn-ghost-white" id="btnBatchClear"><i class="bi bi-x-lg"></i> 取消</button>
+            </div>
+            <div class="table-wrap" id="tableView">
+                <table id="testCaseTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            <div class="card-view" id="cardView" style="display:none;"></div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 导出 ==================== -->
+    <section class="content-page" id="page-export">
+        <div class="page-hero">
+            <h2>导出管理 <small>自定义文件名，一键导出 Excel 或 CSV</small></h2>
+        </div>
+
+        <div class="export-card">
+            <div class="export-icon"><i class="bi bi-file-earmark-arrow-down"></i></div>
+            <div class="export-info">
+                <strong id="exportCaseCount">0</strong> 条测试用例就绪
+            </div>
+            <div class="export-filename">
+                <label>文件名</label>
+                <input type="text" id="exportFilename" class="form-control" placeholder="test_cases">
+                <small class="text-muted">默认包含时间戳，留空则自动命名</small>
+            </div>
+            <div class="export-buttons">
+                <button class="btn btn-export xlsx" id="btnExportXLSX">
+                    <i class="bi bi-file-earmark-excel"></i>
+                    <div><strong>Excel</strong><small>.xlsx</small></div>
+                </button>
+                <button class="btn btn-export csv" id="btnExportCSV">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <div><strong>CSV</strong><small>.csv</small></div>
+                </button>
+                <button class="btn btn-export" id="btnExportJSON" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:12px 20px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all var(--transition);">
+                    <i class="bi bi-download" style="font-size:1.3rem;color:var(--color-accent);"></i>
+                    <div><strong>JSON 备份</strong><small>.json</small></div>
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ==================== PAGE: 测试报告 ==================== -->
+    <section class="content-page" id="page-report">
+        <div class="page-hero">
+            <h2>测试报告 <small>统计概览、分布分析、报告导出</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-ghost" id="btnExportReport"><i class="bi bi-download"></i> 导出 HTML 报告</button>
+            </div>
+        </div>
+        <div class="report-empty" id="reportEmpty">
+            <i class="bi bi-bar-chart" style="font-size:2rem;"></i>
+            <p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p>
+        </div>
+        <div id="reportContent" style="display:none;">
+            <div class="report-grid">
+                <div class="report-card" id="reportCardTotal"><div class="report-card-label">总用例数</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardP0"><div class="report-card-label">P0</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardP1"><div class="report-card-label">P1</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardP2"><div class="report-card-label">P2</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardP3"><div class="report-card-label">P3</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardPass"><div class="report-card-label">执行通过</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardFail"><div class="report-card-label">执行失败</div><div class="report-card-value">0</div></div>
+                <div class="report-card" id="reportCardReview"><div class="report-card-label">已评审</div><div class="report-card-value">0</div></div>
+            </div>
+            <div class="report-charts">
+                <div class="report-chart-card">
+                    <div class="report-chart-title">优先级分布</div>
+                    <div class="report-bar-group" id="reportPriorityBars"></div>
+                </div>
+                <div class="report-chart-card">
+                    <div class="report-chart-title">模块分布</div>
+                    <div class="report-bar-group" id="reportModuleBars"></div>
+                </div>
+                <div class="report-chart-card">
+                    <div class="report-chart-title">执行状态</div>
+                    <div class="report-ring" id="reportExecRing"><svg viewBox="0 0 120 120" class="report-svg"></svg><div class="report-ring-center" id="reportRingCenter">0%</div></div>
+                    <div class="report-ring-legend" id="reportExecLegend"></div>
+                </div>
+                <div class="report-chart-card">
+                    <div class="report-chart-title">评审状态</div>
+                    <div id="reportReviewBars"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ==================== PAGE: JSON / XML 工具 ==================== -->
+    <section class="content-page" id="page-formatter">
+        <div class="page-hero">
+            <h2>JSON / XML 工具 <small>格式化、验证、对比</small></h2>
+        </div>
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="fm-tabs" id="fmTabs">
+                    <button class="fm-tab active" data-tab="json">JSON 格式化</button>
+                    <button class="fm-tab" data-tab="xml">XML 格式化</button>
+                    <button class="fm-tab" data-tab="diff">对比 Diff</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON tab -->
+        <div class="fm-panel active" id="fmPanelJson">
+            <div class="fm-input-row">
+                <div class="fm-input-group">
+                    <label class="fm-label">输入</label>
+                    <textarea id="fmJsonInput" class="form-control fm-textarea" placeholder='{"key": "value"}'></textarea>
+                </div>
+                <div class="fm-input-group">
+                    <label class="fm-label">输出</label>
+                    <textarea id="fmJsonOutput" class="form-control fm-textarea" readonly></textarea>
+                </div>
+            </div>
+            <div class="fm-actions">
+                <button class="btn btn-accent btn-sm" id="btnFmJsonFormat"><i class="bi bi-magic"></i> 格式化</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmJsonCompact"><i class="bi bi-compress"></i> 压缩</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmJsonValidate"><i class="bi bi-check-lg"></i> 验证</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmJsonCopy"><i class="bi bi-copy"></i> 复制</button>
+            </div>
+        </div>
+
+        <!-- XML tab -->
+        <div class="fm-panel" id="fmPanelXml">
+            <div class="fm-input-row">
+                <div class="fm-input-group">
+                    <label class="fm-label">输入</label>
+                    <textarea id="fmXmlInput" class="form-control fm-textarea" placeholder="<root><item/></root>"></textarea>
+                </div>
+                <div class="fm-input-group">
+                    <label class="fm-label">输出</label>
+                    <textarea id="fmXmlOutput" class="form-control fm-textarea" readonly></textarea>
+                </div>
+            </div>
+            <div class="fm-actions">
+                <button class="btn btn-accent btn-sm" id="btnFmXmlFormat"><i class="bi bi-magic"></i> 格式化</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmXmlCompact"><i class="bi bi-compress"></i> 压缩</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmXmlCopy"><i class="bi bi-copy"></i> 复制</button>
+            </div>
+        </div>
+
+        <!-- Diff tab -->
+        <div class="fm-panel" id="fmPanelDiff">
+            <div class="fm-input-row">
+                <div class="fm-input-group">
+                    <label class="fm-label">左侧 (旧)</label>
+                    <textarea id="fmDiffLeft" class="form-control fm-textarea" placeholder="原始内容"></textarea>
+                </div>
+                <div class="fm-input-group">
+                    <label class="fm-label">右侧 (新)</label>
+                    <textarea id="fmDiffRight" class="form-control fm-textarea" placeholder="新内容"></textarea>
+                </div>
+            </div>
+            <div class="fm-actions">
+                <button class="btn btn-accent btn-sm" id="btnFmDiffGo"><i class="bi bi-arrows-expand"></i> 对比</button>
+                <button class="btn btn-ghost btn-sm" id="btnFmDiffClear"><i class="bi bi-eraser"></i> 清空</button>
+            </div>
+            <div id="fmDiffOutput" class="fm-diff-output mt-2"></div>
+        </div>
+    </section>
+
+
+    <!-- ==================== PAGE: 在线编辑器 ==================== -->
+    <section class="content-page" id="page-editor">
+        <div class="page-hero">
+            <h2>在线编辑器 <small>打开和编辑 TXT / Excel / Word 文件</small></h2>
+        </div>
+
+        <div class="editor-toolbar">
+            <button class="btn btn-accent btn-sm" id="btnEditorOpen"><i class="bi bi-folder-open"></i> <span class="btn-text">打开文件</span></button>
+            <button class="btn btn-outline btn-sm" id="btnEditorNew"><i class="bi bi-plus-lg"></i> <span class="btn-text">新建</span></button>
+            <button class="btn btn-ghost btn-sm" id="btnEditorSave" disabled><i class="bi bi-save"></i> <span class="btn-text">保存</span></button>
+            <button class="btn btn-ghost btn-sm" id="btnEditorSaveAs" disabled><i class="bi bi-download"></i> <span class="btn-text">另存为</span></button>
+            <button class="btn btn-ghost btn-sm" id="btnEditorClose" disabled><i class="bi bi-x-lg"></i> <span class="btn-text">关闭</span></button>
+        </div>
+        <div class="editor-tabs" id="editorTabs"></div>
+        <div class="editor-container" id="editorContainer">
+            <div class="editor-empty-state" id="editorEmptyState">
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                <p>点击「打开文件」或拖放文件到此处</p>
+                <small>支持 .txt / .xlsx / .xls / .docx</small>
+            </div>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".txt,.xlsx,.xls,.docx" style="display:none">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+    </section>
+
+    <!-- ==================== PAGE: 正则测试器 ==================== -->
+    <section class="content-page" id="page-regex">
+        <div class="page-hero">
+            <h2>正则测试器 <small>实时匹配、捕获组分析、常用正则参考</small></h2>
+        </div>
+        <div class="regex-layout">
+            <div class="regex-main">
+                <div class="regex-toolbar">
+                    <div class="regex-field-group">
+                        <label>正则表达式</label>
+                        <div class="regex-input-row">
+                            <input type="text" id="regexPattern" class="form-control form-control-sm font-mono" placeholder="输入正则表达式..." spellcheck="false">
+                            <button class="btn btn-ghost btn-sm" id="btnRegexClear"><i class="bi bi-eraser"></i></button>
+                        </div>
+                    </div>
+                    <div class="regex-flags">
+                        <label class="regex-flags-label">标志</label>
+                        <label class="regex-flag"><input type="checkbox" data-flag="g" checked> g <small>全局</small></label>
+                        <label class="regex-flag"><input type="checkbox" data-flag="i"> i <small>忽略大小写</small></label>
+                        <label class="regex-flag"><input type="checkbox" data-flag="m"> m <small>多行</small></label>
+                        <label class="regex-flag"><input type="checkbox" data-flag="s"> s <small>点号通配</small></label>
+                    </div>
+                </div>
+                <div class="regex-input-area">
+                    <label>测试文本</label>
+                    <textarea id="regexTestText" class="form-control regex-textarea" placeholder="在此输入要匹配的文本..." spellcheck="false"></textarea>
+                </div>
+                <div class="regex-status-bar" id="regexStatusBar">
+                    <span>匹配结果: <strong id="regexMatchCount">0</strong></span>
+                    <span class="regex-status-sep">|</span>
+                    <span>捕获组: <strong id="regexGroupCount">0</strong></span>
+                    <span class="regex-status-sep">|</span>
+                    <span class="regex-error" id="regexError"></span>
+                </div>
+                <div class="regex-match-area" id="regexMatchArea">
+                    <div class="regex-highlight-box" id="regexHighlightBox"></div>
+                </div>
+                <div class="regex-capture-groups" id="regexCaptureGroups" style="display:none;">
+                    <div class="regex-section-title">捕获组详情</div>
+                    <div id="regexGroupsBody"></div>
+                </div>
+            </div>
+            <div class="regex-sidebar">
+                <div class="regex-quick-ref">
+                    <div class="regex-section-title">常用正则参考</div>
+                    <div id="regexQuickRefBody">
+                        <div class="regex-ref-item"><code>.</code><span>匹配任意字符（除换行）</span></div>
+                        <div class="regex-ref-item"><code>\\d</code><span>数字 [0-9]</span></div>
+                        <div class="regex-ref-item"><code>\\w</code><span>单词字符 [a-zA-Z0-9_]</span></div>
+                        <div class="regex-ref-item"><code>\\s</code><span>空白字符</span></div>
+                        <div class="regex-ref-item"><code>^</code><span>字符串开头</span></div>
+                        <div class="regex-ref-item"><code>$</code><span>字符串结尾</span></div>
+                        <div class="regex-ref-item"><code>*</code><span>0 次或多次</span></div>
+                        <div class="regex-ref-item"><code>+</code><span>1 次或多次</span></div>
+                        <div class="regex-ref-item"><code>?</code><span>0 次或 1 次</span></div>
+                        <div class="regex-ref-item"><code>{n,m}</code><span>重复 n 到 m 次</span></div>
+                        <div class="regex-ref-item"><code>(...)</code><span>捕获组</span></div>
+                        <div class="regex-ref-item"><code>(?:...)</code><span>非捕获组</span></div>
+                        <div class="regex-ref-item"><code>(?=...)</code><span>正向先行断言</span></div>
+                        <div class="regex-ref-item"><code>(?!...)</code><span>负向先行断言</span></div>
+                        <div class="regex-ref-item"><code>[...]</code><span>字符集</span></div>
+                        <div class="regex-ref-item"><code>|</code><span>或</span></div>
+                    </div>
+                </div>
+                <div class="regex-common-patterns mt-3">
+                    <div class="regex-section-title">常用模式</div>
+                    <div id="regexCommonBody"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: SQL 查询工具 ==================== -->
+    <section class="content-page" id="page-sql">
+        <div class="page-hero">
+            <h2>SQL 查询工具 <small>导入 CSV，执行 SQL 查询，验证数据场景</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnSqlImport"><i class="bi bi-upload"></i> 导入 CSV</button>
+            </div>
+        </div>
+        <div class="sql-layout">
+            <div class="sql-editor-pane">
+                <div class="sql-toolbar">
+                    <button class="btn btn-accent btn-sm" id="btnSqlExecute"><i class="bi bi-play-fill"></i> 执行 (Ctrl+Enter)</button>
+                    <button class="btn btn-ghost btn-sm" id="btnSqlClear"><i class="bi bi-eraser"></i> 清空</button>
+                    <span class="sql-status" id="sqlStatus"></span>
+                </div>
+                <div class="sql-editor-wrap" id="sqlEditorWrap">
+                    <textarea id="sqlEditor" placeholder="SELECT * FROM users; -- Ctrl+Enter 执行"></textarea>
+                </div>
+            </div>
+            <div class="sql-sidebar">
+                <div class="sql-schema-panel">
+                    <div class="sql-sidebar-title">表结构 <button class="btn btn-ghost btn-sm" id="btnSqlRefreshSchema"><i class="bi bi-arrow-clockwise"></i></button></div>
+                    <div id="sqlSchemaTree" class="sql-schema-tree"></div>
+                </div>
+            </div>
+        </div>
+        <div class="sql-results-panel" id="sqlResultsPanel" style="display:none;">
+            <div class="sql-results-toolbar">
+                <span><strong id="sqlResultCount">0</strong> 行</span>
+                <span class="sql-status-sep">|</span>
+                <span id="sqlExecTime">0 ms</span>
+            </div>
+            <div class="sql-results-table-wrap">
+                <table class="sql-results-table" id="sqlResultsTable">
+                    <thead id="sqlResultsHead"></thead>
+                    <tbody id="sqlResultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sql-error-panel" id="sqlErrorPanel" style="display:none;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <span id="sqlErrorMessage"></span>
+        </div>
+
+        <!-- CSV Import Modal -->
+        <div class="modal fade" id="csvImportModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-upload me-2"></i>导入 CSV 数据</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">表名 <span class="text-danger">*</span></label>
+                            <input type="text" id="csvTableName" class="form-control" placeholder="如：students, orders_2024" value="my_data">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">选择 CSV 文件</label>
+                            <input type="file" id="csvFileInput" class="form-control" accept=".csv,.txt">
+                            <div class="form-text">第一行作为列名，支持 .csv / .txt 文件</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">或直接粘贴 CSV 内容</label>
+                            <textarea id="csvTextInput" class="form-control" rows="6" placeholder="name,age,score&#10;张三,28,95&#10;李四,32,88&#10;王五,24,92"></textarea>
+                        </div>
+                        <div id="csvImportStatus" class="small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="btnCsvImport"><i class="bi bi-upload"></i> 导入</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 环境配置管理 ==================== -->
+    <section class="content-page" id="page-env">
+        <div class="page-hero">
+            <h2>环境配置管理 <small>管理测试环境地址、账号、请求头信息</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnEnvAdd"><i class="bi bi-plus-lg"></i> 新建环境</button>
+            </div>
+        </div>
+        <div id="envEmpty" class="env-empty">
+            <i class="bi bi-cloud-slash" style="font-size:2.5rem;"></i>
+            <p class="mt-2">暂无环境配置</p>
+        </div>
+        <div id="envList" style="display:none;"></div>
+    </section>
+
+    <!-- ==================== PAGE: Bug 管理 ==================== -->
+    <section class="content-page" id="page-bugreport">
+        <div class="page-hero">
+            <h2>Bug 管理 <small>创建、管理、导出 Bug 报告</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnBugNew"><i class="bi bi-plus-lg"></i> 新建 Bug</button>
+                <button class="btn btn-outline btn-sm" id="btnBugFromCase"><i class="bi bi-grid-3x3-gap"></i> 从用例创建</button>
+                <button class="btn btn-ghost btn-sm" id="btnBugRefresh"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="bugSearchInput" placeholder="搜索标题/模块/标签...">
+                </div>
+                <select id="bugFilterStatus" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">全部状态</option>
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                    <option value="reopened">Reopened</option>
+                </select>
+                <select id="bugFilterSeverity" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">全部严重程度</option>
+                    <option value="P0">P0</option>
+                    <option value="P1">P1</option>
+                    <option value="P2">P2</option>
+                    <option value="P3">P3</option>
+                </select>
+            </div>
+            <div class="toolbar-right">
+                <span class="text-muted small" id="bugCount">0 个 Bug</span>
+                <div class="dropdown">
+                    <button class="btn btn-ghost btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i> 导出</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" data-bug-export="jira"><i class="bi bi-ticket-detailed"></i> Jira 格式</a></li>
+                        <li><a class="dropdown-item" data-bug-export="github"><i class="bi bi-markdown"></i> GitHub Markdown</a></li>
+                        <li><a class="dropdown-item" data-bug-export="markdown"><i class="bi bi-file-text"></i> 通用 Markdown</a></li>
+                        <li><a class="dropdown-item" data-bug-export="csv-jira"><i class="bi bi-table"></i> CSV (Jira 导入)</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bug list -->
+        <div id="bugListArea">
+            <div class="bug-empty" id="bugEmpty">
+                <i class="bi bi-bug" style="font-size:2.5rem;"></i>
+                <p class="mt-2 mb-0">暂无 Bug，点击「新建 Bug」开始</p>
+            </div>
+            <div id="bugTableWrap" class="bug-table-wrap" style="display:none;">
+                <table class="bug-table" id="bugTable">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">ID</th>
+                            <th>标题</th>
+                            <th style="width:90px;">严重程度</th>
+                            <th style="width:110px;">状态</th>
+                            <th style="width:120px;">模块</th>
+                            <th style="width:150px;">创建时间</th>
+                            <th style="width:90px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bugTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Preview / Export section -->
+        <div class="bug-export-section" id="bugExportSection" style="display:none;">
+            <div class="bug-export-header">
+                <span><i class="bi bi-eye"></i> 导出预览 — <strong id="bugExportCount">0</strong> 条</span>
+                <div class="bug-export-actions">
+                    <button class="btn btn-accent btn-sm" id="btnBugCopy"><i class="bi bi-clipboard"></i> 复制</button>
+                    <button class="btn btn-outline btn-sm" id="btnBugDownload"><i class="bi bi-download"></i> 下载</button>
+                    <button class="btn btn-ghost btn-sm" id="btnBugCloseExport"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+            <textarea id="bugPreview" class="form-control bug-preview-textarea" readonly></textarea>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 工具集 ==================== -->
+    <section class="content-page" id="page-toolkit">
+        <div class="page-hero">
+            <h2>工具集 <small>编码转换 / 时间戳 / 密码生成</small></h2>
+        </div>
+
+        <div class="toolkit-tabs">
+            <button class="toolkit-tab active" data-ktab="encoding"><i class="bi bi-arrows-expand"></i> 编码转换</button>
+            <button class="toolkit-tab" data-ktab="timestamp"><i class="bi bi-clock"></i> 时间戳</button>
+            <button class="toolkit-tab" data-ktab="generator"><i class="bi bi-key"></i> 密码/UUID</button>
+        </div>
+
+        <!-- Encoding -->
+        <div class="toolkit-panel active" id="ktab-encoding">
+            <div class="encoding-toolbar">
+                <div class="encoding-type-group">
+                    <button class="btn btn-ghost btn-sm encoding-type active" data-enc="base64">Base64</button>
+                    <button class="btn btn-ghost btn-sm encoding-type" data-enc="url">URL</button>
+                    <button class="btn btn-ghost btn-sm encoding-type" data-enc="html">HTML 实体</button>
+                    <button class="btn btn-ghost btn-sm encoding-type" data-enc="unicode">Unicode</button>
+                </div>
+                <div class="encoding-direction">
+                    <button class="btn btn-accent btn-sm" id="btnEncEncode">编码 <i class="bi bi-arrow-right"></i></button>
+                    <button class="btn btn-outline btn-sm" id="btnEncDecode"><i class="bi bi-arrow-left"></i> 解码</button>
+                </div>
+                <div class="ms-auto">
+                    <button class="btn btn-ghost btn-sm" id="btnEncClear"><i class="bi bi-eraser"></i> 清空</button>
+                    <button class="btn btn-ghost btn-sm" id="btnEncSwap"><i class="bi bi-arrow-left-right"></i> 互换</button>
+                </div>
+            </div>
+            <div class="encoding-layout">
+                <div class="encoding-panel">
+                    <div class="panel-label">输入</div>
+                    <textarea id="encInput" class="encoding-textarea" placeholder="在此输入要编码/解码的文本..."></textarea>
+                </div>
+                <div class="encoding-panel">
+                    <div class="panel-label">输出 <small id="encOutputInfo"></small></div>
+                    <textarea id="encOutput" class="encoding-textarea" readonly placeholder="结果将显示在这里..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timestamp -->
+        <div class="toolkit-panel" id="ktab-timestamp">
+            <div class="ts-layout">
+                <div class="ts-card">
+                    <div class="ts-card-header"><i class="bi bi-arrow-right-short"></i> 时间戳 → 日期</div>
+                    <div class="ts-card-body">
+                        <div class="ts-input-row">
+                            <input type="text" id="tsInput" class="form-control" placeholder="输入 Unix 时间戳（秒或毫秒）" value="1716969600">
+                            <select id="tsInputType" class="form-select ts-input-type">
+                                <option value="auto">自动判断</option>
+                                <option value="sec">秒</option>
+                                <option value="ms">毫秒</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-accent btn-sm mt-2" id="btnTsNow"><i class="bi bi-arrow-repeat"></i> 当前时间戳</button>
+                        <div class="ts-results mt-3">
+                            <div class="ts-result-item"><span class="ts-result-label">ISO 8601</span><code id="tsResultIso">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultIso"><i class="bi bi-clipboard"></i></button></div>
+                            <div class="ts-result-item"><span class="ts-result-label">YYYY-MM-DD HH:mm:ss</span><code id="tsResultFull">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultFull"><i class="bi bi-clipboard"></i></button></div>
+                            <div class="ts-result-item"><span class="ts-result-label">UTC</span><code id="tsResultUtc">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultUtc"><i class="bi bi-clipboard"></i></button></div>
+                            <div class="ts-result-item"><span class="ts-result-label">Locale</span><code id="tsResultLocale">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultLocale"><i class="bi bi-clipboard"></i></button></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-card">
+                    <div class="ts-card-header"><i class="bi bi-arrow-left-short"></i> 日期 → 时间戳</div>
+                    <div class="ts-card-body">
+                        <div class="ts-input-row">
+                            <input type="datetime-local" id="tsDateInput" class="form-control">
+                        </div>
+                        <div class="ts-results mt-3">
+                            <div class="ts-result-item"><span class="ts-result-label">秒级时间戳</span><code id="tsResultSec">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultSec"><i class="bi bi-clipboard"></i></button></div>
+                            <div class="ts-result-item"><span class="ts-result-label">毫秒级时间戳</span><code id="tsResultMs">—</code><button class="btn btn-ghost btn-xs ts-copy-btn" data-target="tsResultMs"><i class="bi bi-clipboard"></i></button></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password / UUID -->
+        <div class="toolkit-panel" id="ktab-generator">
+            <div class="gen-tabs">
+                <button class="btn btn-ghost btn-sm gen-tab active" data-chtab="password">密码生成</button>
+                <button class="btn btn-ghost btn-sm gen-tab" data-chtab="uuid">UUID 生成</button>
+            </div>
+            <div class="gen-tab-content active" id="genPassword">
+                <div class="gen-config-card">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="gen-label">密码长度</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" id="genPwLen" class="form-range" min="4" max="64" value="16">
+                                <span class="gen-range-val" id="genPwLenVal">16</span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="gen-label">字符类型</label>
+                            <div class="gen-charset">
+                                <label class="gen-chk"><input type="checkbox" id="genPwUpper" checked> 大写 <span class="text-muted">A-Z</span></label>
+                                <label class="gen-chk"><input type="checkbox" id="genPwLower" checked> 小写 <span class="text-muted">a-z</span></label>
+                                <label class="gen-chk"><input type="checkbox" id="genPwDigit" checked> 数字 <span class="text-muted">0-9</span></label>
+                                <label class="gen-chk"><input type="checkbox" id="genPwSym" checked> 符号 <span class="text-muted">!@#$%</span></label>
+                                <label class="gen-chk"><input type="checkbox" id="genPwAmbiguous"> 排除歧义 <span class="text-muted">il1o0O</span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex gap-2 align-items-center">
+                        <button class="btn btn-accent btn-sm" id="btnGenPw"><i class="bi bi-shield-check"></i> 生成密码</button>
+                        <span class="gen-strength" id="genPwStrength"></span>
+                    </div>
+                </div>
+                <div class="gen-result-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="gen-label">生成的密码</span>
+                        <span class="gen-count" id="genPwCount">0 个</span>
+                    </div>
+                    <div id="genPwList" class="gen-list"><div class="gen-empty">点击「生成密码」开始</div></div>
+                </div>
+            </div>
+            <div class="gen-tab-content" id="genUuid">
+                <div class="gen-config-card">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label class="gen-label">生成数量</label>
+                            <input type="number" id="genUuidCount" class="form-control" value="5" min="1" max="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="gen-label">格式</label>
+                            <select id="genUuidFormat" class="form-select">
+                                <option value="upper">大写</option>
+                                <option value="lower" selected>小写</option>
+                                <option value="nobraces">无花括号</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-accent btn-sm" id="btnGenUuid"><i class="bi bi-plus-circle"></i> 生成 UUID</button>
+                    </div>
+                </div>
+                <div class="gen-result-card">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="gen-label">生成的 UUID</span>
+                        <span class="gen-count" id="genUuidCountLabel">0 个</span>
+                    </div>
+                    <div id="genUuidList" class="gen-list"><div class="gen-empty">点击「生成 UUID」开始</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: RTM 追溯 ==================== -->
+    <section class="content-page" id="page-rtm">
+        <div class="page-hero">
+            <h2>RTM 追溯 <small>需求追溯矩阵 — 分析需求覆盖率</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnRtmGenerate"><i class="bi bi-diagram-3"></i> 生成追溯矩阵</button>
+                <button class="btn btn-ghost btn-sm" id="btnRtmCopy"><i class="bi bi-copy"></i> 复制</button>
+            </div>
+        </div>
+        <div class="rtm-stats" id="rtmStats" style="display:none;">
+            <div class="rtm-stat-card"><span class="rtm-stat-num" id="rtmTotal">0</span><span class="rtm-stat-label">需求项</span></div>
+            <div class="rtm-stat-card covered"><span class="rtm-stat-num" id="rtmCovered">0</span><span class="rtm-stat-label">已覆盖</span></div>
+            <div class="rtm-stat-card partial"><span class="rtm-stat-num" id="rtmPartial">0</span><span class="rtm-stat-label">部分覆盖</span></div>
+            <div class="rtm-stat-card uncovered"><span class="rtm-stat-num" id="rtmUncovered">0</span><span class="rtm-stat-label">未覆盖</span></div>
+            <div class="rtm-stat-card rate"><span class="rtm-stat-num" id="rtmRate">0%</span><span class="rtm-stat-label">覆盖率</span></div>
+        </div>
+        <div id="rtmLoading" class="rtm-loading" style="display:none;"><div class="spinner-border spinner-border-sm me-2"></div>正在分析...</div>
+        <div id="rtmNoCases" class="report-empty"><i class="bi bi-inbox"></i><p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p></div>
+        <div id="rtmContent" style="display:none;">
+            <div class="rtm-filters">
+                <select id="rtmFilterStatus" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">全部状态</option>
+                    <option value="covered">已覆盖</option>
+                    <option value="partial">部分覆盖</option>
+                    <option value="uncovered">未覆盖</option>
+                </select>
+                <input type="text" id="rtmFilterInput" class="form-control form-control-sm" placeholder="搜索需求..." style="width:200px;">
+            </div>
+            <div class="rtm-table-wrap">
+                <table class="rtm-table" id="rtmTable">
+                    <thead><tr><th>ID</th><th>需求标题</th><th>需求内容</th><th>关联用例</th><th>状态</th><th>匹配说明</th></tr></thead>
+                    <tbody id="rtmBody"></tbody>
+                </table>
+            </div>
+            <div class="rtm-usage" id="rtmUsage" style="display:none;"></div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: API 测试 ==================== -->
+    <section class="content-page" id="page-apitest">
+        <div class="page-hero">
+            <h2>API 接口测试 <small>发送 HTTP 请求，查看响应</small></h2>
+            <div class="page-hero-actions">
+                <a class="btn btn-ghost btn-sm" data-bs-toggle="collapse" href="#aptTutorial" role="button"><i class="bi bi-book"></i> 使用教程</a>
+            </div>
+        </div>
+        <div class="collapse mb-3" id="aptTutorial">
+            <div class="card card-body tutorial-card">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="tutorial-step-card">
+                            <div class="tutorial-step-num">1</div>
+                            <h6>输入请求地址</h6>
+                            <p class="mb-0">选择 HTTP 方法（GET/POST/PUT/DELETE 等），输入目标 URL。</p>
+                            <div class="tutorial-example mt-2">
+                                <code>GET https://api.github.com/users/octocat</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="tutorial-step-card">
+                            <div class="tutorial-step-num">2</div>
+                            <h6>配置请求头</h6>
+                            <p class="mb-0">添加认证 Token、Content-Type 等请求头信息。</p>
+                            <div class="tutorial-example mt-2">
+                                <code>Authorization: Bearer xxx</code>
+                                <br><code>Content-Type: application/json</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="tutorial-step-card">
+                            <div class="tutorial-step-num">3</div>
+                            <h6>填写请求体</h6>
+                            <p class="mb-0">POST/PUT 请求时填写 JSON 格式的请求体数据。</p>
+                            <div class="tutorial-example mt-2">
+                                <code>{"name": "test", "email": "a@b.com"}</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="tutorial-step-card">
+                            <div class="tutorial-step-num">4</div>
+                            <h6>发送 &amp; 查看响应</h6>
+                            <p class="mb-0">点击「发送」，查看状态码、响应头和响应体。</p>
+                            <div class="tutorial-example mt-2">
+                                <code>200 OK · 120 ms</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr class="my-3">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="mb-2"><i class="bi bi-lightbulb"></i> 常用免费测试 API</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://api.github.com/users/octocat" data-method="GET">GitHub 用户信息</button>
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://jsonplaceholder.typicode.com/posts/1" data-method="GET">JSONPlaceholder GET</button>
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://jsonplaceholder.typicode.com/posts" data-method="POST" data-body='{"title":"foo","body":"bar","userId":1}'>JSONPlaceholder POST</button>
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://httpbin.org/get" data-method="GET">httpbin GET</button>
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://httpbin.org/post" data-method="POST" data-body='{"test":"data"}'>httpbin POST</button>
+                            <button class="btn btn-outline btn-sm apt-sample-btn" data-url="https://api.github.com/users/defunx/repos" data-method="GET">GitHub 仓库列表</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="api-test-toolbar">
+            <select id="aptMethod" class="form-select form-select-sm" style="width:100px;">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+            <input type="text" id="aptUrl" class="form-control form-control-sm" placeholder="https://api.example.com/endpoint">
+            <button class="btn btn-accent btn-sm" id="btnAptSend"><i class="bi bi-send"></i> 发送</button>
+            <div class="ms-auto d-flex gap-2">
+                <button class="btn btn-ghost btn-sm" id="btnAptClear"><i class="bi bi-eraser"></i> 清空</button>
+                <div class="dropdown">
+                    <button class="btn btn-ghost btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-gear-wide-connected"></i> 环境</button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="aptEnvMenu"><li><span class="dropdown-item-text text-muted">无环境配置</span></li></ul>
+                </div>
+            </div>
+        </div>
+        <div class="api-test-layout">
+            <div class="api-test-left">
+                <div class="api-test-section">
+                    <div class="api-test-section-title">请求头 <button class="btn btn-ghost btn-xs" id="btnAptAddHdr"><i class="bi bi-plus-lg"></i></button></div>
+                    <div id="aptHeaders"></div>
+                </div>
+                <div class="api-test-section" style="flex:1;">
+                    <div class="api-test-section-title">请求体 <small class="text-muted">(JSON)</small></div>
+                    <textarea id="aptBody" class="form-control font-mono" style="flex:1;resize:none;min-height:150px;" placeholder='{"key": "value"}'></textarea>
+                </div>
+            </div>
+            <div class="api-test-right">
+                <div class="api-test-section" style="flex:1;display:flex;flex-direction:column;">
+                    <div class="api-test-section-title">响应 <span class="text-muted" id="aptStatus"></span> <span class="text-muted" id="aptDuration"></span></div>
+                    <div id="aptResponse" class="api-test-response" style="flex:1;"><div class="api-test-placeholder">点击「发送」发起请求</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 脚本生成 ==================== -->
+    <section class="content-page" id="page-script">
+        <div class="page-hero">
+            <h2>Playwright 脚本生成 <small>将测试用例转为可执行的自动化脚本</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnScriptGenerate"><i class="bi bi-file-code"></i> 生成脚本</button>
+            </div>
+        </div>
+        <div id="scriptNoCases" class="report-empty"><i class="bi bi-inbox"></i><p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p></div>
+        <div id="scriptContent" style="display:none;">
+            <div id="scriptList"></div>
+            <div class="sc-usage" id="scriptUsage" style="display:none;"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Environment Edit Modal -->
+<div class="modal fade" id="envModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-gear-wide-connected me-2"></i><span id="envModalTitle">编辑环境</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">环境名称</label>
+                        <input type="text" id="envFormName" class="form-control" placeholder="如: dev, staging, prod">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">基础 URL</label>
+                        <input type="url" id="envFormBaseUrl" class="form-control" placeholder="http://localhost:8080">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">自定义请求头</label>
+                    <div id="envFormHeaders"></div>
+                    <button class="btn btn-ghost btn-sm mt-1" id="btnEnvAddHeader"><i class="bi bi-plus-lg"></i> 添加请求头</button>
+                </div>
+                <div>
+                    <label class="form-label">测试账号</label>
+                    <div id="envFormAccounts"></div>
+                    <button class="btn btn-ghost btn-sm mt-1" id="btnEnvAddAccount"><i class="bi bi-plus-lg"></i> 添加账号</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnEnvSave">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑测试用例</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnSaveDetail">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm / Alert / Prompt Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="confirmModalTitle">确认</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center px-4" id="confirmModalBody">
+        <p id="confirmModalMessage"></p>
+        <div id="confirmModalInputWrap" style="display:none;">
+          <input type="text" id="confirmModalInput" class="form-control mt-3" placeholder="">
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0 justify-content-center gap-2" id="confirmModalFooter">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmModalCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="confirmModalOk">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Keyboard Shortcuts Modal -->
+<div class="modal fade" id="shortcutsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-keyboard me-2"></i>快捷键</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <table class="shortcuts-table">
+                    <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>生成测试用例</td></tr>
+                    <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>保存到用例库</td></tr>
+                    <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>撤销</td></tr>
+                    <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Shift</kbd>+<kbd>Z</kbd></td><td>重做</td></tr>
+                    <tr><td><kbd>Delete</kbd></td><td>删除选中用例</td></tr>
+                    <tr><td><kbd>/</kbd></td><td>聚焦搜索框</td></tr>
+                    <tr><td><kbd>?</kbd></td><td>显示此面板</td></tr>
+                </table>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">知道了</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== AUTH MODAL (Login / Register) ==================== -->
+<div class="modal fade" id="authModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="authModalTitle">登录</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4">
+                <ul class="auth-tabs-nav">
+                    <li class="auth-tabs-item"><span class="auth-tabs-link active" data-amode="login">登录</span></li>
+                    <li class="auth-tabs-item"><span class="auth-tabs-link" data-amode="register">注册</span></li>
+                </ul>
+                <div id="authFormLogin">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" id="authLoginUsername" class="form-control" placeholder="输入用户名" autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" id="authLoginPassword" class="form-control" placeholder="输入密码" autocomplete="current-password">
+                    </div>
+                    <div class="auth-error" id="authLoginError" style="display:none;"></div>
+                    <button class="btn btn-primary w-100" id="btnAuthLogin"><i class="bi bi-box-arrow-in-right me-1"></i> 登录</button>
+                </div>
+                <div id="authFormRegister" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" id="authRegUsername" class="form-control" placeholder="至少3个字符" autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" id="authRegPassword" class="form-control" placeholder="至少6个字符" autocomplete="new-password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认密码</label>
+                        <input type="password" id="authRegConfirm" class="form-control" placeholder="再次输入密码">
+                    </div>
+                    <div class="auth-error" id="authRegError" style="display:none;"></div>
+                    <button class="btn btn-success w-100" id="btnAuthRegister"><i class="bi bi-person-plus me-1"></i> 注册</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== LIBRARY MODAL ==================== -->
+<div class="modal fade" id="libraryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-collection me-2"></i>用例库</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="libraryModalBody">
+                <div class="library-layout">
+                    <div class="library-tree-pane" id="libraryTreePane">
+                        <div class="library-tree-toolbar">
+                            <span class="tree-pane-title">文件夹</span>
+                            <button class="btn btn-ghost btn-sm" id="btnNewFolder" title="新建文件夹"><i class="bi bi-folder-plus"></i></button>
+                            <button class="btn btn-ghost btn-sm" id="btnRefreshLibTree" title="刷新"><i class="bi bi-arrow-clockwise"></i></button>
+                        </div>
+                        <div class="library-tree" id="libraryTree"></div>
+                    </div>
+                    <div class="library-content-pane" id="libraryContentPane">
+                        <div class="text-center text-muted py-4">
+                            <div class="spinner mb-2"></div>
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bug Edit Modal -->
+<div class="modal fade" id="bugEditModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bugEditModalTitle"><i class="bi bi-bug me-2"></i>编辑 Bug</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">标题 <span class="text-danger">*</span></label>
+                        <input type="text" id="bugFormTitle" class="form-control" placeholder="输入 Bug 标题">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">严重程度</label>
+                        <select id="bugFormSeverity" class="form-select">
+                            <option value="P0">P0 - 阻断</option>
+                            <option value="P1">P1 - 严重</option>
+                            <option value="P2" selected>P2 - 一般</option>
+                            <option value="P3">P3 - 轻微</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">状态</label>
+                        <select id="bugFormStatus" class="form-select">
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                            <option value="reopened">Reopened</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">模块</label>
+                        <input type="text" id="bugFormModule" class="form-control" placeholder="所属模块">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">描述</label>
+                        <textarea id="bugFormDescription" class="form-control" rows="3" placeholder="Bug 详细描述..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">前置条件 / 测试数据</label>
+                        <textarea id="bugFormPreconditions" class="form-control" rows="3" placeholder="前置条件..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">测试步骤</label>
+                        <textarea id="bugFormSteps" class="form-control" rows="3" placeholder="重现步骤..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">预期结果</label>
+                        <textarea id="bugFormExpected" class="form-control" rows="3" placeholder="预期结果..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">实际结果</label>
+                        <textarea id="bugFormActual" class="form-control" rows="3" placeholder="实际结果..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">标签</label>
+                        <input type="text" id="bugFormTags" class="form-control" placeholder="逗号分隔，如：regression,ui">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">关联用例 ID</label>
+                        <input type="text" id="bugFormCaseId" class="form-control" placeholder="如：TC-001">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="btnBugSave"><i class="bi bi-check-lg"></i> 保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dependency Search Modal -->
+<div class="modal fade" id="dependencyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-link-45deg me-2"></i>查找前置用例</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="dep-tabs-nav" id="depTabs">
+          <li class="dep-tabs-item"><span class="dep-tabs-link active" data-tab="current">当前用例</span></li>
+          <li class="dep-tabs-item"><span class="dep-tabs-link" data-tab="library">用例库</span></li>
+        </ul>
+        <div class="dep-tab-content" id="depTabCurrent">
+          <input type="text" id="depSearchInput" class="form-control" placeholder="搜索用例标题 / 编号 / 模块...">
+          <div id="depSearchResults" class="mt-3"></div>
+        </div>
+        <div class="dep-tab-content" id="depTabLibrary" style="display:none;">
+          <div class="dep-lib-layout">
+            <div class="dep-lib-tree">
+              <div class="dep-lib-tree-label">文件夹</div>
+              <div id="depLibFolderTree"></div>
+            </div>
+            <div class="dep-lib-cases">
+              <div id="depLibBreadcrumb" class="dep-breadcrumb mb-2"></div>
+              <div id="depLibResults"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save to library folder-picker modal -->
+<div class="modal fade" id="saveToLibModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">保存到用例库</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">集合名称</label>
+        <input type="text" id="saveToLibName" class="form-control mb-3" placeholder="测试用例集名称">
+        <label class="form-label">目标文件夹</label>
+        <select id="saveToLibFolder" class="form-select">
+          <option value="">根目录（未分类）</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="btnSaveToLibConfirm">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Move set to folder modal -->
+<div class="modal fade" id="moveSetModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">移动到文件夹</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">目标文件夹</label>
+        <select id="moveSetFolder" class="form-select">
+          <option value="">根目录（未分类）</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="btnMoveSetConfirm">移动</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test Data Generator Modal -->
+<div class="modal fade" id="dataGenModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-dice me-2"></i>测试数据生成器</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">数据类型</label>
+            <select id="dataGenType" class="form-select">
+              <option value="mobile">手机号</option>
+              <option value="email">邮箱地址</option>
+              <option value="name">中文姓名</option>
+              <option value="idcard">身份证号</option>
+              <option value="bankcard">银行卡号</option>
+              <option value="ip">IP 地址</option>
+              <option value="url">URL 链接</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">生成数量</label>
+            <input type="number" id="dataGenCount" class="form-control" value="10" min="1" max="500">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-primary w-100" id="btnDataGenGo"><i class="bi bi-lightning"></i> 生成</button>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-ghost w-100" id="btnDataGenCopy" title="复制全部"><i class="bi bi-copy"></i> 复制</button>
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="form-label">生成结果 <small class="text-muted" id="dataGenCountLabel"></small></label>
+          <textarea id="dataGenResult" class="form-control" rows="12" readonly style="font-family: 'SF Mono', monospace; font-size: 0.82rem; background: var(--color-bg);"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Load from library confirmation modal -->
+<div class="modal fade" id="loadFromLibModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content load-from-lib-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title w-100 text-center fw-bold" id="loadFromLibModalTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center px-4" id="loadFromLibModalBody">
+      </div>
+      <div class="modal-footer border-0 pt-0 justify-content-center gap-2" id="loadFromLibModalFooter">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="datalistContainer" style="display:none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js"></script>
+<script src="/static/js/app.js?v=49"></script>
+<script src="/static/js/modules/bugs.js?v=2"></script>
+<script src="/static/js/modules/json-tools.js"></script>
+<script src="/static/js/modules/toolkit.js?v=2"></script>
+<script src="/static/js/modules/regex.js?v=2"></script>
+<script src="/static/js/modules/sql.js?v=2"></script>
+<script src="/static/js/modules/env.js?v=2"></script>
+<script src="/static/js/modules/report.js?v=2"></script>
+<script src="/static/js/modules/rtm.js?v=2"></script>
+<script src="/static/js/modules/apitest.js?v=2"></script>
+<script src="/static/js/modules/scriptgen.js?v=2"></script>
+<script src="/static/js/modules/auth.js?v=2"></script>
+<script src="/static/js/modules/shortcuts.js?v=2"></script>
+<script src="/static/js/editor.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+.bug-pick-item .bug-pick-id { font-family: "SF Mono", monospace; font-size: 0.75rem; font-weight: 600; color: var(--color-accent); min-width: 60px; }

@@ -1,0 +1,1 @@
+.search-box i { color: var(--color-text-secondary); font-size: 0.82rem; }

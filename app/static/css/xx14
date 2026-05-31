@@ -1,0 +1,13 @@
+.nav-section {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--sidebar-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 12px 16px 3px;
+    opacity: 0.5;
+    cursor: default;
+    user-select: none;
+    margin-top: 4px;
+}
+

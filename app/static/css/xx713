@@ -1,0 +1,1 @@
+.md-preview pre { background: var(--color-bg); padding: 12px 16px; border-radius: 6px; overflow-x: auto; margin-bottom: 1em; }

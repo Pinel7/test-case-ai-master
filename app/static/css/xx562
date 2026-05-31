@@ -1,0 +1,1 @@
+.regex-common-btn code { font-family: "SF Mono", "Consolas", monospace; color: var(--color-accent); font-size: 0.82rem; }

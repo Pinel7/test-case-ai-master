@@ -1,0 +1,1 @@
+.tree-link:hover { opacity: 1 !important; background: var(--color-border); }

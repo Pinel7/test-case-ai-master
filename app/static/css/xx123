@@ -1,0 +1,5 @@
+.editor-tab.active {
+    color: var(--color-accent); font-weight: 600;
+    border-bottom: 2px solid var(--color-accent);
+    background: #fafbff;
+}

@@ -1,0 +1,11 @@
+.btn-load-replace {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 0.82rem; font-weight: 600;
+    color: #fff;
+    background: #e65100;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex; align-items: center; gap: 5px;
+}

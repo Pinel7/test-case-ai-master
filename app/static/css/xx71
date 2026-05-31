@@ -1,0 +1,11 @@
+.field-chip {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem; font-weight: 500;
+    cursor: pointer; user-select: none;
+    transition: all var(--transition);
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+}

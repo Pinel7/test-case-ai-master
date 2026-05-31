@@ -1,0 +1,5 @@
+.api-warn-dot {
+    display: inline-block; width: 7px; height: 7px;
+    background: #ff4d4f; border-radius: 50%;
+    margin-left: 3px; vertical-align: super;
+}

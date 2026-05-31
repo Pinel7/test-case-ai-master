@@ -1,0 +1,6 @@
+.batch-menu-group {
+    font-size: 0.7rem; font-weight: 700;
+    color: #7b7f8a; padding: 6px 12px 2px;
+    text-transform: uppercase; letter-spacing: .5px;
+}
+

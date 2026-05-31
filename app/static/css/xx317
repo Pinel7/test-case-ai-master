@@ -1,0 +1,5 @@
+.tree-item.selected {
+    background: var(--color-accent-light);
+    color: var(--color-accent); font-weight: 600;
+}
+

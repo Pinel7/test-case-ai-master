@@ -1,0 +1,11 @@
+.dep-select-set-breadcrumb {
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    color: var(--color-accent);
+    cursor: pointer; padding: 2px 10px;
+    font-size: 0.72rem; font-weight: 500;
+    transition: all var(--transition);
+    margin-left: 8px;
+    white-space: nowrap;
+}

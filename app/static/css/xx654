@@ -1,0 +1,1 @@
+.encoding-type.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }

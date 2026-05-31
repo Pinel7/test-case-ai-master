@@ -1,0 +1,3 @@
+#sidebar.sidebar-collapsed .sidebar-footer small {
+    display: none;
+}

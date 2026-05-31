@@ -1,0 +1,1 @@
+.ts-result-item code { flex: 1; font-family: "SF Mono", "Consolas", monospace; font-size: 0.82rem; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

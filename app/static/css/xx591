@@ -1,0 +1,10 @@
+.sql-error-panel { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff5f5; border: 1px solid #fecaca; border-radius: var(--radius); color: #dc2626; font-size: 0.85rem; }
+[data-theme="dark"] .sql-results-table th { background: #282a36; }
+[data-theme="dark"] .sql-results-table td { border-bottom-color: #2a2b36; }
+[data-theme="dark"] .sql-results-table tbody tr:hover { background: #282a38; }
+[data-theme="dark"] .sql-error-panel { background: #3a1a1a; border-color: #5a2a2a; color: #f5a0a0; }
+[data-theme="dark"] .sql-schema-columns code { background: #2a2b36; }
+
+/* ============================
+   ENVIRONMENT CONFIG
+   ============================ */

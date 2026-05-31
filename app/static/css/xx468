@@ -1,0 +1,6 @@
+tr.drag-over td { border-bottom: 2px solid var(--color-accent) !important; }
+[data-theme="dark"] tr.drag-over td { border-bottom-color: var(--color-accent) !important; }
+
+/* ============================
+   CUSTOM CONFIRM MODAL
+   ============================ */

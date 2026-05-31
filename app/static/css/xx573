@@ -1,0 +1,1 @@
+.sql-sidebar-title { font-size: 0.82rem; font-weight: 700; color: var(--color-text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }

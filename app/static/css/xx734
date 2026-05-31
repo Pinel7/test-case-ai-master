@@ -1,0 +1,1 @@
+.rtm-table-wrap { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); overflow: auto; max-height: 500px; }

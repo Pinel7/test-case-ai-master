@@ -1,0 +1,5 @@
+.dep-result-badge {
+    font-size: 0.78rem; font-weight: 600; font-family: monospace;
+    background: var(--color-accent); color: #fff;
+    padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+}

@@ -1,0 +1,2 @@
+.shortcuts-table kbd { display: inline-block; padding: 2px 6px; font-size: 0.72rem; font-family: "SF Mono", monospace; background: #f0f1f5; border: 1px solid #d0d4e0; border-radius: 4px; box-shadow: 0 1px 0 #b0b5c8; color: #2c2e33; }
+[data-theme="dark"] .shortcuts-table kbd { background: #2a2b36; border-color: #3a3b46; box-shadow: 0 1px 0 #4a4b56; color: #e0e0e0; }

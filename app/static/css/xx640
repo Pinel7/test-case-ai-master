@@ -1,0 +1,1 @@
+.bug-empty { text-align: center; padding: 48px 20px; color: var(--color-text-secondary); }

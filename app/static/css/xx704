@@ -1,0 +1,1 @@
+.input-tab:last-child { border-right: none; }

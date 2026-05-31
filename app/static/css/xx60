@@ -1,0 +1,6 @@
+.split-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    min-height: 420px;
+}

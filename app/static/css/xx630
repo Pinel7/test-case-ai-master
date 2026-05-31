@@ -1,0 +1,1 @@
+.bug-pick-item:hover { background: var(--color-bg); }

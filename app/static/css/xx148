@@ -1,0 +1,5 @@
+.theme-toggle:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-text); }
+[data-theme="dark"] .theme-toggle { border-color: rgba(255,255,255,.1); }
+[data-theme="dark"] .theme-toggle:hover { background: rgba(255,255,255,.06); }
+
+/* Sidebar auth */

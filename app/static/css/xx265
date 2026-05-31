@@ -1,0 +1,5 @@
+.batch-bar .btn-ghost-white:hover { background: rgba(255,255,255,.06); color: #fff; }
+
+/* ============================
+   TOAST NOTIFICATION
+   ============================ */

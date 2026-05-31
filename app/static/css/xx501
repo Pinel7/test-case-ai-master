@@ -1,0 +1,8 @@
+#filterPriority, #filterReview, #filterExec {
+    min-width: 100px;
+    font-size: 0.78rem;
+}
+
+/* ============================
+   FORMATTER (JSON / XML / Diff)
+   ============================ */

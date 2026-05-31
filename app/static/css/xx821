@@ -1,0 +1,10 @@
+.home-settings-item-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: #f4f5f9;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+[data-theme="dark"] .home-settings-item-icon { background: #2a2b36; }

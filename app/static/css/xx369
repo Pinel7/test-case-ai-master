@@ -1,0 +1,2 @@
+.dep-select-set:hover { opacity: 1 !important; background: var(--color-accent-light); }
+

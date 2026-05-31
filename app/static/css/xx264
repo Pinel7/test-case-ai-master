@@ -1,0 +1,7 @@
+.batch-bar .btn-ghost-white {
+    background: transparent; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px; padding: 6px 10px;
+    font-size: 0.78rem; color: #a0a2b0; cursor: pointer;
+    white-space: nowrap; transition: all var(--transition);
+    display: flex; align-items: center; gap: 4px;
+}

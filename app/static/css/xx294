@@ -1,0 +1,10 @@
+.lib-item-actions button {
+    background: none; border: none;
+    color: var(--color-text-secondary); cursor: pointer;
+    padding: 4px 8px; border-radius: 4px;
+    font-size: 0.85rem; transition: all var(--transition);
+}
+.lib-item-actions button.lib-share { color: var(--color-accent); }
+.lib-item-actions button.lib-share:hover { background: var(--color-accent-light); }
+.lib-item-shared { opacity: 0.85; background: var(--color-accent-light); border-radius: 8px; padding: 2px 0; }
+.lib-item-shared .lib-item-icon i { color: var(--color-accent); }

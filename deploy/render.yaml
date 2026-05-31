@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: testcaseai
+    env: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false

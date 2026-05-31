@@ -1,0 +1,4 @@
+.setup-actions .btn-accent:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(99,102,241,.35);
+}

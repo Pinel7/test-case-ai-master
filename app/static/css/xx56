@@ -1,0 +1,12 @@
+.btn-accent {
+    background: var(--color-accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 6px 16px;
+    font-size: 0.82rem;
+    color: #fff; font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all var(--transition);
+    white-space: nowrap;
+}

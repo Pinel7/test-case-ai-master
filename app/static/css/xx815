@@ -1,0 +1,5 @@
+.home-quick-btn:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-md);
+    color: var(--color-accent);
+}

@@ -1,0 +1,7 @@
+.diff-add { background: #d3f5d3; color: #176b1a; border-radius: 2px; padding: 0 2px; }
+[data-theme="dark"] .diff-del { background: #4a1a1a; color: #f5a0a0; }
+[data-theme="dark"] .diff-add { background: #1a3a1a; color: #80d680; }
+
+/* ============================
+   BATCH ACTIONS BAR (floating bottom)
+   ============================ */

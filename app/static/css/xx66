@@ -1,0 +1,8 @@
+.polish-content {
+    flex: 1;
+    padding: 16px;
+    font-size: 0.87rem; line-height: 1.8;
+    overflow-y: auto;
+    color: #4a4e5c;
+    white-space: pre-wrap;
+}

@@ -1,0 +1,1 @@
+.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4 { margin-top: 1em; margin-bottom: 0.5em; font-weight: 600; }

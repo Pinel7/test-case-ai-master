@@ -1,0 +1,3 @@
+#sidebar.sidebar-collapsed .sidebar-user-avatar {
+    margin: 0;
+}

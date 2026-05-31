@@ -1,0 +1,1 @@
+.template-menu-item:hover { background: var(--color-accent-light); color: var(--color-accent); }

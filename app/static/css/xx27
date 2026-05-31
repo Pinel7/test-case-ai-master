@@ -1,0 +1,4 @@
+.model-picker {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--color-text-secondary); font-size: 0.85rem;
+}

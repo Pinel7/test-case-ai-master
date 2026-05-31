@@ -1,0 +1,26 @@
+.btn-load-replace:hover { background: #bf360c; }
+
+/* Dark mode overrides */
+[data-theme="dark"] .load-from-lib-content {
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+[data-theme="dark"] .load-lib-icon {
+    background: #252742;
+}
+[data-theme="dark"] .load-lib-icon.warning {
+    background: #3e2723;
+    color: #ff9800;
+}
+[data-theme="dark"] .load-lib-warning {
+    background: #3e2723;
+    color: #ff9800;
+}
+[data-theme="dark"] .btn-load-cancel {
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+}
+[data-theme="dark"] .btn-load-cancel:hover { background: #2a2b36; }
+
+/* ============================
+   RTM PAGE
+   ============================ */

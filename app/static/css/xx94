@@ -1,0 +1,7 @@
+.btn-detail {
+    padding: 3px 8px; font-size: 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: #fff; cursor: pointer;
+    transition: all var(--transition);
+}

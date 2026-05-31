@@ -1,0 +1,3 @@
+#sidebar.sidebar-collapsed .sidebar-logo {
+    width: 36px; height: 36px;
+}

@@ -1,0 +1,1 @@
+.lib-item-actions button:hover { background: var(--color-border); }

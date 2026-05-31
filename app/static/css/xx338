@@ -1,0 +1,3 @@
+.lib-batch-bar button.text-danger { color: #d32f2f; }
+
+/* Library list header (select all) */

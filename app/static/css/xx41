@@ -1,0 +1,1 @@
+.token-counter strong { color: var(--color-accent); }

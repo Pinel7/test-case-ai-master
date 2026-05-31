@@ -1,0 +1,4 @@
+.setup-step-body p {
+    font-size: 0.85rem; color: var(--color-text-secondary);
+    margin: 0 0 16px;
+}

@@ -1,0 +1,1 @@
+.script-tab.active { color: var(--color-accent); font-weight: 600; border-bottom-color: var(--color-accent); background: #fafbff; }

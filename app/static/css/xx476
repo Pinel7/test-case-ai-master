@@ -1,0 +1,1 @@
+.report-card-label { font-size: 0.78rem; color: var(--color-text-secondary); margin-bottom: 4px; }

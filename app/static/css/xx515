@@ -1,0 +1,9 @@
+.diff-table th {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    background: #f7f8fc;
+    border-bottom: 2px solid var(--color-border);
+    position: sticky; top: 0;
+}

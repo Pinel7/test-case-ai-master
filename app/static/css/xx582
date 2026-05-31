@@ -1,0 +1,1 @@
+.sql-del-table:hover { opacity: 1; color: #dc2626; }

@@ -1,0 +1,1 @@
+.sc-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }

@@ -1,0 +1,5 @@
+.load-from-lib-content {
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,.12);
+}

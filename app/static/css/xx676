@@ -1,0 +1,1 @@
+.gen-tab-content.active { display: block; animation: fadeUp .2s ease; }

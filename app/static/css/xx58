@@ -1,0 +1,12 @@
+.btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    color: var(--color-accent); font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all var(--transition);
+    white-space: nowrap;
+}

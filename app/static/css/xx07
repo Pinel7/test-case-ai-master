@@ -1,0 +1,2 @@
+.sidebar-title span { color: var(--color-accent); }
+

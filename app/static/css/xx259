@@ -1,0 +1,17 @@
+.batch-bar .batch-menu {
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 6px;
+    background: #1e1f2b;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    min-width: 160px; max-height: 260px;
+    overflow-y: auto;
+    display: none; padding: 2px;
+    z-index: 1000;
+}
+[data-theme="dark"] .batch-menu {
+    background: #2a2b3a;
+    border-color: rgba(255,255,255,.1);
+}

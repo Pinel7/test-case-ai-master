@@ -1,0 +1,5 @@
+.lib-batch-bar .lib-batch-count {
+    font-weight: 700; background: var(--color-accent);
+    color: #fff; padding: 1px 8px; border-radius: 10px;
+    font-size: 0.78rem;
+}

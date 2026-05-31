@@ -1,0 +1,10 @@
+.editor-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    font-size: 0.8rem; color: var(--color-text-secondary);
+    cursor: pointer; user-select: none;
+    border-right: 1px solid var(--color-border);
+    white-space: nowrap;
+    transition: all var(--transition);
+    position: relative;
+}

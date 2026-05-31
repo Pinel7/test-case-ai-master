@@ -1,0 +1,1 @@
+.nav-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); }

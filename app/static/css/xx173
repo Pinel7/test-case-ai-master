@@ -1,0 +1,1 @@
+.login-overlay-box .auth-tabs-link.active { color: #a78bfa; border-bottom-color: #a78bfa; }

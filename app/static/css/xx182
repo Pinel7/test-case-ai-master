@@ -1,0 +1,4 @@
+.login-overlay-box .btn-success {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: none;
+}

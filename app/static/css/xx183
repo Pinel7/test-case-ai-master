@@ -1,0 +1,4 @@
+.login-overlay-box .btn-success:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(5,150,105,.4);
+}

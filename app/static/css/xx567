@@ -1,0 +1,1 @@
+.sql-status { margin-left: auto; font-size: 0.78rem; color: var(--color-text-secondary); }

@@ -1,0 +1,4 @@
+.editor-tab .tab-close {
+    font-size: 0.7rem; opacity: 0.4; margin-left: 2px;
+    transition: opacity var(--transition);
+}

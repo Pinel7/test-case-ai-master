@@ -1,0 +1,5 @@
+#testCaseTable td {
+    padding: 6px 8px;
+    vertical-align: top;
+    border-bottom: 1px solid #f0f1f5;
+}

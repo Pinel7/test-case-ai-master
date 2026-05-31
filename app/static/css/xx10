@@ -1,0 +1,1 @@
+.nav-item:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-text); }

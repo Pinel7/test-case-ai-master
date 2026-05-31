@@ -1,0 +1,1 @@
+.dep-breadcrumb .dep-breadcrumb-link:hover { text-decoration: underline; }

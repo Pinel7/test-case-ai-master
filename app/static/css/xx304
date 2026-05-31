@@ -1,0 +1,4 @@
+.lib-subfolder:hover .lib-subfolder-arrow { opacity: 0.8; color: var(--color-accent); }
+[data-theme="dark"] .lib-subfolder { background: var(--color-card-bg, #1e1e2e); }
+[data-theme="dark"] .lib-subfolder:hover { background: var(--color-accent-light); }
+

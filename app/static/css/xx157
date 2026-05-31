@@ -1,0 +1,1 @@
+.login-bg-shapes span:nth-child(1) { left: 10%; top: 10%; width: 80px; height: 80px; animation-delay: 0s; animation-duration: 25s; background: rgba(99,102,241,.08); }

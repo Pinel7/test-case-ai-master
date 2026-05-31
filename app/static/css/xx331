@@ -1,0 +1,2 @@
+.tree-item-root .bi-folder { color: var(--color-accent); }
+

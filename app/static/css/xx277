@@ -1,0 +1,1 @@
+.dep-result-item:hover { background: var(--color-accent-soft, #e8f4e8); border-color: var(--color-accent); }

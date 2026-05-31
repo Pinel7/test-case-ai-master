@@ -1,0 +1,6 @@
+.editor-tab.dirty::before {
+    content: "●";
+    font-size: 0.45rem; color: var(--color-accent);
+    position: relative; top: -1px;
+}
+

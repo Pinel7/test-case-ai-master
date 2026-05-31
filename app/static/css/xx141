@@ -1,0 +1,5 @@
+#luckysheet-modal-dialog {
+    z-index: 1000 !important;
+}
+
+/* CodeMirror override */

@@ -1,0 +1,1 @@
+.batch-bar .batch-menu-btn:hover { background: rgba(255,255,255,.14); color: #fff; }

@@ -1,0 +1,1 @@
+.setup-model input[type="radio"] { accent-color: var(--color-accent); margin: 0; }

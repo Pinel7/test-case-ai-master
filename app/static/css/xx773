@@ -1,0 +1,2 @@
+.sc-code code { font-family: "SF Mono", "Consolas", monospace; }
+[data-theme="dark"] .sc-code pre { background: #11111b; }

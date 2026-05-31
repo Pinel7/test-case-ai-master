@@ -1,0 +1,6 @@
+.toolkit-panel.active { display: block; }
+[data-theme="dark"] .toolkit-tabs { background: #1e1f29; }
+
+/* ============================
+   ENCODING CONVERTER
+   ============================ */

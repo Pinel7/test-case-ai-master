@@ -1,0 +1,1 @@
+.encoding-textarea { flex: 1; border: none; outline: none; padding: 16px; font-family: "SF Mono", "Consolas", monospace; font-size: 0.85rem; line-height: 1.7; resize: none; min-height: 300px; background: var(--color-surface); color: var(--color-text); }

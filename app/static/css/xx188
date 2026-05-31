@@ -1,0 +1,7 @@
+#setupOverlay {
+    position: fixed; inset: 0; z-index: 9998;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto;
+    animation: setupFadeIn .4s ease;
+}
+@keyframes setupFadeIn { from { opacity: 0; } to { opacity: 1; } }

@@ -1,0 +1,1 @@
+.sql-results-table th { padding: 6px 10px; font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); text-align: left; border-bottom: 2px solid var(--color-border); background: #f7f8fc; position: sticky; top: 0; }

@@ -1,0 +1,2 @@
+.dep-select-folder:hover { opacity: 1 !important; background: var(--color-accent-light); }
+

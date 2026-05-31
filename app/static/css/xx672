@@ -1,0 +1,6 @@
+.btn-xs { padding: 2px 6px; font-size: 0.7rem; }
+[data-theme="dark"] .ts-card-header { background: #1e1f29; }
+
+/* ============================
+   PASSWORD / UUID GENERATOR
+   ============================ */

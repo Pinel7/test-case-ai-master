@@ -1,0 +1,4 @@
+.setup-test-row .btn-accent:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99,102,241,.35);
+}

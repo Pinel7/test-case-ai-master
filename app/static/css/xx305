@@ -1,0 +1,4 @@
+.lib-empty {
+    text-align: center; padding: 32px 16px;
+    color: var(--color-text-secondary);
+}

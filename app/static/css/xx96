@@ -1,0 +1,8 @@
+.search-box {
+    display: flex; align-items: center;
+    background: #f5f6f8;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    gap: 6px;
+}

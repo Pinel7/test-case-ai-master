@@ -1,0 +1,1 @@
+#confirmModal .btn-primary { background: var(--color-accent); border-color: var(--color-accent); }

@@ -1,0 +1,2 @@
+.setup-close:hover { background: var(--sidebar-hover-bg); color: var(--color-text); }
+

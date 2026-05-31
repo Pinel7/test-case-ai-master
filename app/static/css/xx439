@@ -1,0 +1,1 @@
+.card-item-module { color: var(--color-text-secondary); background: var(--color-surface); padding: 2px 8px; border-radius: 4px; }

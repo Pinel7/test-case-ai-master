@@ -1,0 +1,4 @@
+.luckysheet-toolbar-button {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+/* Fix luckysheet potential z-index issues */

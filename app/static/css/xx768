@@ -1,0 +1,1 @@
+.sc-card-header .sc-id { color: var(--color-accent); font-family: "SF Mono", monospace; font-size: 0.78rem; }

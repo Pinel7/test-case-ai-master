@@ -1,0 +1,1 @@
+.ts-result-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--color-bg); border-radius: 6px; }

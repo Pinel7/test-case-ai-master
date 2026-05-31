@@ -1,0 +1,9 @@
+.setup-provider {
+    background: var(--color-accent-light, rgba(79,70,229,.05));
+    border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 16px;
+    text-align: center;
+}
+[data-theme="dark"] .setup-provider {
+    background: rgba(255,255,255,.04);
+}

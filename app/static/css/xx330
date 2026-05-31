@@ -1,0 +1,4 @@
+.tree-item-root {
+    font-weight: 600; color: var(--color-text);
+    padding-left: 10px;
+}

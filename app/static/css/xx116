@@ -1,0 +1,5 @@
+.empty-table-msg { text-align: center; padding: 3rem; color: var(--color-text-secondary); }
+
+/* ============================
+   MODAL
+   ============================ */

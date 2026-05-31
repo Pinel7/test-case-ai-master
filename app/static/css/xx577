@@ -1,0 +1,1 @@
+.sql-schema-table-name:hover { text-decoration: underline; }

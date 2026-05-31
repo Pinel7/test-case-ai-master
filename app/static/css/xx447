@@ -1,0 +1,9 @@
+.card-view-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--color-text-secondary); }
+
+[data-theme="dark"] .card-item { background: var(--color-card); border-color: var(--color-border); }
+[data-theme="dark"] .card-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+[data-theme="dark"] .card-item-module { background: #2a2b36; }
+
+/* ============================
+   TAG CLOUD & BADGES
+   ============================ */

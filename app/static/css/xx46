@@ -1,0 +1,2 @@
+.auto-save-dot { font-size: 0.65rem; color: #10b981; opacity: 0; transition: opacity 0.4s; margin-left: auto; font-weight: 400; }
+[data-theme="dark"] .auto-save-dot { color: #34d399; }

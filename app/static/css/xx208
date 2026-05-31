@@ -1,0 +1,5 @@
+.setup-provider .btn-outline-light:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}

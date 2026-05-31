@@ -1,0 +1,4 @@
+.setup-provider .btn-outline-light {
+    color: var(--color-text); border-color: var(--color-border);
+    font-size: 0.78rem;
+}

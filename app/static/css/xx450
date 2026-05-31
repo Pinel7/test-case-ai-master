@@ -1,0 +1,10 @@
+.tag-cloud-item {
+    font-size: 0.78rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition);
+}
