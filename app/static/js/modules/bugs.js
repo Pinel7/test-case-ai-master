@@ -1,6 +1,8 @@
 // ====== Bug CRUD Module ======
 let bugs = [];
 let bugEditId = null;
+const BUG_PAGE_SIZE = 20;
+let _bugPageOffset = 0;
 
 function renderBugSeverity(s) {
     const map = {P0:"bug-sv-p0",P1:"bug-sv-p1",P2:"bug-sv-p2",P3:"bug-sv-p3"};
@@ -23,9 +25,15 @@ async function refreshBugList() {
         if (status) params.set("status", status);
         if (severity) params.set("severity", severity);
         if (q) params.set("q", q);
+        params.set("limit", String(BUG_PAGE_SIZE));
+        params.set("offset", String(_bugPageOffset));
         const data = await apiFetch("/api/bugs?" + params.toString());
         bugs = data.bugs || data || [];
-        if (countEl) countEl.textContent = bugs.length + " 个 Bug";
+        const total = data.total || bugs.length;
+        if (countEl) {
+            const showing = Math.min(bugs.length, total);
+            countEl.textContent = total > BUG_PAGE_SIZE ? `${showing}/${total} 个 Bug` : `${total} 个 Bug`;
+        }
         if (!tbody) return;
         if (bugs.length === 0) {
             tbody.innerHTML = "";
@@ -38,7 +46,7 @@ async function refreshBugList() {
         tbody.innerHTML = bugs.map(b => {
             const sevHtml = renderBugSeverity(b.severity);
             const stHtml = renderBugStatus(b.status);
-            const created = (b.created_at || "").slice(0, 10);
+            const created = window.formatTime(b.created_at || "").slice(0, 10);
             return `<tr data-id="${b.id}">
                 <td>${escHtml(b.id)}</td>
                 <td class="bug-title-cell">${escHtml(b.title)}</td>
@@ -59,6 +67,39 @@ async function refreshBugList() {
                 if (!isNaN(id)) openBugEdit(id);
             });
         });
+
+        // Pagination controls
+        const paginationId = "bugPagination";
+        let pagEl = document.getElementById(paginationId);
+        if (total > BUG_PAGE_SIZE) {
+            const totalPages = Math.ceil(total / BUG_PAGE_SIZE);
+            const currentPage = Math.floor(_bugPageOffset / BUG_PAGE_SIZE) + 1;
+            const html = `
+            <div id="${paginationId}" class="pagination-bar d-flex align-items-center justify-content-between px-2 py-1 mt-1">
+                <small class="text-muted">共 ${total} 个 Bug</small>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-ghost btn-sm ${_bugPageOffset <= 0 ? 'disabled' : ''}" id="btnBugPrevPage" ${_bugPageOffset <= 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i> 上一页</button>
+                    <small class="text-muted">第 ${currentPage}/${totalPages} 页</small>
+                    <button class="btn btn-ghost btn-sm ${_bugPageOffset + BUG_PAGE_SIZE >= total ? 'disabled' : ''}" id="btnBugNextPage" ${_bugPageOffset + BUG_PAGE_SIZE >= total ? 'disabled' : ''}>下一页 <i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>`;
+            if (!pagEl) {
+                document.getElementById("bugListArea")?.insertAdjacentHTML('beforeend', html);
+            } else {
+                pagEl.outerHTML = html;
+            }
+            document.getElementById("btnBugPrevPage")?.addEventListener("click", () => {
+                _bugPageOffset = Math.max(0, _bugPageOffset - BUG_PAGE_SIZE);
+                refreshBugList();
+            });
+            document.getElementById("btnBugNextPage")?.addEventListener("click", () => {
+                _bugPageOffset += BUG_PAGE_SIZE;
+                refreshBugList();
+            });
+        } else {
+            if (pagEl) pagEl.remove();
+            _bugPageOffset = 0;
+        }
     } catch(e) {
         toast("获取 Bug 列表失败: " + e.message, "danger");
     }
@@ -254,7 +295,7 @@ function initBugPage() {
     });
 
     let debounceTimer;
-    const doFilter = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(refreshBugList, 300); };
+    const doFilter = () => { _bugPageOffset = 0; clearTimeout(debounceTimer); debounceTimer = setTimeout(refreshBugList, 300); };
     document.getElementById("bugSearchInput")?.addEventListener("input", doFilter);
     document.getElementById("bugFilterStatus")?.addEventListener("change", doFilter);
     document.getElementById("bugFilterSeverity")?.addEventListener("change", doFilter);

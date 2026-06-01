@@ -1,9 +1,10 @@
 import logging
 import sys
 from pathlib import Path
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ def _get_app_dir() -> Path:
 
 
 _APP_DIR = _get_app_dir()
-_TPL_PATH = _APP_DIR / "templates" / "index.html"
+templates = Jinja2Templates(directory=str(_APP_DIR / "templates"))
 
 app.mount("/static", StaticFiles(directory=str(_APP_DIR / "static")), name="static")
 
@@ -53,9 +54,46 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Root page
 # ---------------------------------------------------------------------------
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def index(request: Request):
-    return HTMLResponse(content=_TPL_PATH.read_text(encoding="utf-8"))
+    return templates.TemplateResponse(request, "index.html", {"request": request})
+
+
+# ---------------------------------------------------------------------------
+# Tool pages (standalone)
+# ---------------------------------------------------------------------------
+
+@app.get("/tools/sql")
+async def tool_sql(request: Request):
+    return templates.TemplateResponse(request, "tools/sql.html", {"request": request})
+
+
+@app.get("/tools/bugs")
+async def tool_bugs(request: Request):
+    return templates.TemplateResponse(request, "tools/bugs.html", {"request": request})
+
+
+# ---------------------------------------------------------------------------
+# WebSocket (real-time notifications)
+# ---------------------------------------------------------------------------
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str = ""):
+    from app.services.auth import validate_session
+    from app.services.websocket_manager import manager
+
+    user = validate_session(token)
+    if not user:
+        await websocket.close(code=4001)
+        return
+    await manager.connect(websocket, user["id"])
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user["id"])
+    except Exception:
+        manager.disconnect(websocket, user["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +127,7 @@ from app.routes.library import router as lib_router
 from app.routes.bugs import router as bugs_router
 from app.routes.query import router as query_router
 from app.routes.misc import router as misc_router
+from app.routes.history import router as history_router
 
 app.include_router(auth_router)
 app.include_router(gen_router)
@@ -96,3 +135,4 @@ app.include_router(lib_router)
 app.include_router(bugs_router)
 app.include_router(query_router)
 app.include_router(misc_router)
+app.include_router(history_router)

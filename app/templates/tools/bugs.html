@@ -1,0 +1,98 @@
+{% extends "core/base.html" %}
+{% block title %}TestCaseAI - Bug 管理{% endblock %}
+{% block content %}
+
+<main id="mainContent">
+    <section class="content-page active" id="page-bugreport">
+        <div class="page-hero">
+            <h2>Bug 管理 <small>创建、管理、导出 Bug 报告</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnBugNew"><i class="bi bi-plus-lg"></i> 新建 Bug</button>
+                <button class="btn btn-ghost btn-sm" id="btnBugRefresh"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+            </div>
+        </div>
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="bugSearchInput" placeholder="搜索标题/模块/标签...">
+                </div>
+                <select id="bugFilterStatus" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">全部状态</option>
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                    <option value="reopened">Reopened</option>
+                </select>
+                <select id="bugFilterSeverity" class="form-select form-select-sm" style="width:auto;">
+                    <option value="">全部严重程度</option>
+                    <option value="P0">P0</option>
+                    <option value="P1">P1</option>
+                    <option value="P2">P2</option>
+                    <option value="P3">P3</option>
+                </select>
+            </div>
+            <div class="toolbar-right">
+                <span class="text-muted small" id="bugCount">0 个 Bug</span>
+                <div class="dropdown">
+                    <button class="btn btn-ghost btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i> 导出</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" data-bug-export="jira"><i class="bi bi-ticket-detailed"></i> Jira 格式</a></li>
+                        <li><a class="dropdown-item" data-bug-export="github"><i class="bi bi-markdown"></i> GitHub Markdown</a></li>
+                        <li><a class="dropdown-item" data-bug-export="markdown"><i class="bi bi-file-text"></i> 通用 Markdown</a></li>
+                        <li><a class="dropdown-item" data-bug-export="csv-jira"><i class="bi bi-table"></i> CSV (Jira 导入)</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div id="bugListArea">
+            <div class="empty-state empty-state-sm" id="bugEmpty">
+                <i class="bi bi-bug empty-state-icon"></i>
+                <p class="empty-state-desc">暂无 Bug，点击「新建 Bug」开始</p>
+            </div>
+            <div id="bugTableWrap" class="bug-table-wrap" style="display:none;">
+                <table class="bug-table" id="bugTable">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">ID</th>
+                            <th>标题</th>
+                            <th style="width:90px;">严重程度</th>
+                            <th style="width:110px;">状态</th>
+                            <th style="width:120px;">模块</th>
+                            <th style="width:150px;">创建时间</th>
+                            <th style="width:90px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bugTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="bug-export-section" id="bugExportSection" style="display:none;">
+            <div class="bug-export-header">
+                <span><i class="bi bi-eye"></i> 导出预览 — <strong id="bugExportCount">0</strong> 条</span>
+                <div class="bug-export-actions">
+                    <button class="btn btn-accent btn-sm" id="btnBugCopy"><i class="bi bi-clipboard"></i> 复制</button>
+                    <button class="btn btn-outline btn-sm" id="btnBugDownload"><i class="bi bi-download"></i> 下载</button>
+                    <button class="btn btn-ghost btn-sm" id="btnBugCloseExport"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+            <textarea id="bugPreview" class="form-control bug-preview-textarea" readonly></textarea>
+        </div>
+    </section>
+</main>
+
+{% endblock %}
+{% block extra_js %}
+<script src="/static/js/modules/bugs.js?v=2"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof initBugPage === "function") {
+        setTimeout(() => {
+            initBugPage();
+            refreshBugList();
+        }, 100);
+    }
+});
+</script>
+{% endblock %}

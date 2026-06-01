@@ -50,7 +50,7 @@ class TestSets:
     def test_list_owned(self, db):
         db.save_set("A", [], user_id=1)
         db.save_set("B", [], user_id=1)
-        sets = db.list_sets(user_id=1)
+        sets, _ = db.list_sets(user_id=1)
         assert len(sets) >= 2
         names = [s["name"] for s in sets]
         assert "A" in names
@@ -59,7 +59,7 @@ class TestSets:
     def test_list_filters_by_user(self, db):
         db.save_set("Mine", [], user_id=1)
         db.save_set("NotMine", [], user_id=2)
-        sets = db.list_sets(user_id=1)
+        sets, _ = db.list_sets(user_id=1)
         assert any(s["name"] == "Mine" for s in sets)
         assert not any(s["name"] == "NotMine" for s in sets)
 
@@ -94,7 +94,7 @@ class TestSets:
         fid = db.create_folder("F")
         db.save_set("InFolder", [], folder_id=fid, user_id=1)
         db.save_set("Root", [], user_id=1)
-        sets = db.list_sets(folder_id=fid, user_id=1)
+        sets, _ = db.list_sets(folder_id=fid, user_id=1)
         names = [s["name"] for s in sets]
         assert "InFolder" in names
         assert "Root" not in names
@@ -103,7 +103,7 @@ class TestSets:
         db.save_set("Login Feature", [], user_id=1)
         db.save_set("Logout Feature", [], user_id=1)
         db.save_set("Dashboard", [], user_id=1)
-        sets = db.list_sets(user_id=1, q="Log")
+        sets, _ = db.list_sets(user_id=1, q="Log")
         assert all("Log" in s["name"] for s in sets)
 
     def test_case_count(self, db):
@@ -118,7 +118,7 @@ class TestSharing:
         ok = db.share_set(sid, shared_by_user_id=1, shared_with_user_id=2)
         assert ok
         # User 2 sees it
-        sets = db.list_sets(user_id=2)
+        sets, _ = db.list_sets(user_id=2)
         shared = [s for s in sets if not s["owned"]]
         assert len(shared) == 1
         assert shared[0]["name"] == "SharedSet"
@@ -134,7 +134,7 @@ class TestSharing:
         db.share_set(sid, 1, 2)
         ok = db.revoke_share(sid, shared_by_user_id=1, shared_with_user_id=2)
         assert ok
-        sets = db.list_sets(user_id=2)
+        sets, _ = db.list_sets(user_id=2)
         assert not any(not s["owned"] for s in sets)
 
     def test_list_shares(self, db):
@@ -173,11 +173,14 @@ class TestBugs:
         db.create_bug("Bug B", user_id=1, severity="P2", status="closed")
         db.create_bug("Bug C", user_id=2, severity="P1", status="open")
         # Filter by user
-        assert len(db.list_bugs(user_id=1)) == 2
+        bugs, _ = db.list_bugs(user_id=1)
+        assert len(bugs) == 2
         # Filter by severity
-        assert len(db.list_bugs(user_id=1, severity="P1")) == 1
+        bugs, _ = db.list_bugs(user_id=1, severity="P1")
+        assert len(bugs) == 1
         # Filter by status
-        assert len(db.list_bugs(user_id=1, status="closed")) == 1
+        bugs, _ = db.list_bugs(user_id=1, status="closed")
+        assert len(bugs) == 1
 
 
 class TestSearch:

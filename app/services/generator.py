@@ -2,8 +2,10 @@
 
 import os
 import json
+import hashlib
 import logging
 import asyncio
+import time
 from dotenv import load_dotenv
 from app.models import TestCase
 
@@ -14,6 +16,37 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 2
 RETRY_DELAY = 2  # seconds
+
+# In-memory LLM response cache: {cache_key: (expires_at, result)}
+_cache: dict[str, tuple[float, tuple]] = {}
+_CACHE_TTL = 3600  # 1 hour
+
+
+def _cache_key(*args, **kwargs) -> str:
+    """Generate a cache key from args/kwargs for LLM response caching."""
+    raw = json.dumps((args, sorted(kwargs.items())), sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _cache_get(key: str):
+    entry = _cache.get(key)
+    if entry and entry[0] > time.time():
+        return entry[1]
+    _cache.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, value: tuple):
+    _cache[key] = (time.time() + _CACHE_TTL, value)
+
+def _get_deepseek_client(api_key: str):
+    from openai import AsyncOpenAI
+    return AsyncOpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
+
+def _get_anthropic_client(api_key: str):
+    from anthropic import AsyncAnthropic
+    return AsyncAnthropic(api_key=api_key)
 
 SYSTEM_PROMPT = """You are a senior QA engineer with deep expertise in software testing methodology. Your task is to analyze the provided requirement document and produce comprehensive, production-quality test cases.
 
@@ -171,27 +204,14 @@ def _get_tool_schema(fields: list[str] | None = None) -> dict:
 
 
 def _get_openai_tool_schema(fields: list[str] | None = None) -> dict:
-    props, required = _build_field_schema(fields)
+    """Wrap the Anthropic-style schema into OpenAI function-calling format."""
+    inner = _get_tool_schema(fields)
     return {
         "type": "function",
         "function": {
-            "name": "create_test_cases",
-            "description": "Generate structured test cases from analyzed requirements. Call this function once with the complete array of test cases.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "test_cases": {
-                        "type": "array",
-                        "description": "Array of test case objects covering the requirements from multiple angles.",
-                        "items": {
-                            "type": "object",
-                            "properties": props,
-                            "required": required,
-                        },
-                    }
-                },
-                "required": ["test_cases"],
-            },
+            "name": inner["name"],
+            "description": inner["description"],
+            "parameters": inner["input_schema"],
         },
     }
 
@@ -316,10 +336,8 @@ async def _generate_with_deepseek(
     requirement_text: str, api_key: str | None, model: str,
     fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES
 ) -> tuple[list[TestCase], list[str], dict | None]:
-    from openai import AsyncOpenAI
-
     key = _get_deepseek_key(api_key)
-    client = AsyncOpenAI(api_key=key, base_url="https://api.deepseek.com")
+    client = _get_deepseek_client(key)
     tool_schema = _get_openai_tool_schema(fields)
     system_prompt = _build_system_prompt(case_count)
 
@@ -394,10 +412,8 @@ async def _generate_with_anthropic(
     requirement_text: str, api_key: str | None, model: str,
     fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES
 ) -> tuple[list[TestCase], list[str], dict | None]:
-    from anthropic import AsyncAnthropic
-
     key = _get_anthropic_key(api_key)
-    client = AsyncAnthropic(api_key=key)
+    client = _get_anthropic_client(key)
     tool_schema = _get_tool_schema(fields)
     system_prompt = _build_system_prompt(case_count)
     warnings: list[str] = []
@@ -489,21 +505,29 @@ POLISH_SYSTEM_PROMPT = """You are an expert technical writer specializing in sof
 async def polish_requirement(requirement_text: str, model: str = "deepseek-chat", api_key: str | None = None) -> tuple[str, dict | None]:
     """Polish raw requirement text into structured format using the LLM.
 
+    Results are cached in-memory for 1 hour.
     Returns (polished_text, usage).
     """
+    ck = _cache_key("polish", requirement_text, model)
+    cached = _cache_get(ck)
+    if cached is not None:
+        logger.info("Returning cached polish result for key=%s", ck[:12])
+        return cached
     if model.startswith("deepseek"):
-        return await _polish_with_deepseek(requirement_text, model, api_key)
-    elif model.startswith("claude"):
-        return await _polish_with_anthropic(requirement_text, model, api_key)
+        result = await _polish_with_deepseek(requirement_text, model, api_key)
+    elif model.startswith("claude") or model.startswith("anthropic"):
+        result = await _polish_with_anthropic(requirement_text, model, api_key)
+    elif model.startswith("gpt") or model.startswith("o1") or model.startswith("o3"):
+        raise ValueError(f"Model '{model}' requires OpenAI API key. Use a DeepSeek or Anthropic model instead.")
     else:
-        raise ValueError(f"Unsupported model: {model}. Use 'deepseek-*' or 'claude-*' models.")
+        raise ValueError(f"Unknown model prefix: '{model}'")
+    _cache_set(ck, result)
+    return result
 
 
 async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES) -> tuple[str, dict | None]:
-    from openai import AsyncOpenAI
-
     key = _get_deepseek_key(api_key)
-    client = AsyncOpenAI(api_key=key, base_url="https://api.deepseek.com")
+    client = _get_deepseek_client(key)
 
     last_error = None
     for attempt in range(retries + 1):
@@ -545,10 +569,8 @@ async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str 
 
 
 async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES) -> tuple[str, dict | None]:
-    from anthropic import AsyncAnthropic
-
     key = _get_anthropic_key(api_key)
-    client = AsyncAnthropic(api_key=key)
+    client = _get_anthropic_client(key)
 
     last_error = None
     for attempt in range(retries + 1):
@@ -603,12 +625,25 @@ async def generate_test_cases(
     - Models starting with "deepseek" → DeepSeek API
     - Models starting with "claude" → Anthropic API
 
+    Results are cached in-memory for 1 hour to avoid duplicate API calls.
     Returns (test_cases, warnings, usage).
     """
+    ck = _cache_key("generate_test_cases", requirement_text, model, fields, case_count)
+    cached = _cache_get(ck)
+    if cached is not None:
+        logger.info("Returning cached generation result for key=%s", ck[:12])
+        return cached
+
     if model.startswith("deepseek"):
-        return await _generate_with_deepseek(requirement_text, api_key, model, fields, case_count)
+        result = await _generate_with_deepseek(requirement_text, api_key, model, fields, case_count)
+    elif model.startswith("claude") or model.startswith("anthropic"):
+        result = await _generate_with_anthropic(requirement_text, api_key, model, fields, case_count)
+    elif model.startswith("gpt") or model.startswith("o1") or model.startswith("o3"):
+        raise ValueError(f"Model '{model}' requires OpenAI API key. Please use a DeepSeek or Anthropic/Claude model, or configure OpenAI support separately.")
     else:
-        return await _generate_with_anthropic(requirement_text, api_key, model, fields, case_count)
+        raise ValueError(f"Unknown model prefix: '{model}'. Supported: deepseek-*, claude-*, gpt-*, o1-*, o3-*")
+    _cache_set(ck, result)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -673,25 +708,16 @@ def _get_rtm_tool_schema() -> dict:
 
 
 def _get_openai_rtm_tool_schema() -> dict:
-    schema = _get_rtm_tool_schema()
-    return {
-        "type": "function",
-        "function": {
-            "name": schema["name"],
-            "description": schema["description"],
-            "parameters": schema["input_schema"],
-        },
-    }
+    inner = _get_rtm_tool_schema()
+    return {"type": "function", "function": {"name": inner["name"], "description": inner["description"], "parameters": inner["input_schema"]}}
 
 
 async def _generate_rtm_with_deepseek(
     requirement_text: str, test_cases: list[dict], model: str,
     api_key: str | None = None, retries: int = MAX_RETRIES
 ) -> tuple[list[dict], dict | None]:
-    from openai import AsyncOpenAI
-
     key = _get_deepseek_key(api_key)
-    client = AsyncOpenAI(api_key=key, base_url="https://api.deepseek.com")
+    client = _get_deepseek_client(key)
     tool_schema = _get_openai_rtm_tool_schema()
 
     last_error = None
@@ -760,10 +786,8 @@ async def _generate_rtm_with_anthropic(
     requirement_text: str, test_cases: list[dict], model: str,
     api_key: str | None = None, retries: int = MAX_RETRIES
 ) -> tuple[list[dict], dict | None]:
-    from anthropic import AsyncAnthropic
-
     key = _get_anthropic_key(api_key)
-    client = AsyncAnthropic(api_key=key)
+    client = _get_anthropic_client(key)
     tool_schema = _get_rtm_tool_schema()
 
     last_error = None
@@ -891,25 +915,16 @@ def _get_script_tool_schema() -> dict:
 
 
 def _get_openai_script_tool_schema() -> dict:
-    schema = _get_script_tool_schema()
-    return {
-        "type": "function",
-        "function": {
-            "name": schema["name"],
-            "description": schema["description"],
-            "parameters": schema["input_schema"],
-        },
-    }
+    inner = _get_script_tool_schema()
+    return {"type": "function", "function": {"name": inner["name"], "description": inner["description"], "parameters": inner["input_schema"]}}
 
 
 async def _generate_scripts_with_deepseek(
     test_cases: list[dict], model: str,
     api_key: str | None = None, retries: int = MAX_RETRIES
 ) -> tuple[list[dict], dict | None]:
-    from openai import AsyncOpenAI
-
     key = _get_deepseek_key(api_key)
-    client = AsyncOpenAI(api_key=key, base_url="https://api.deepseek.com")
+    client = _get_deepseek_client(key)
     tool_schema = _get_openai_script_tool_schema()
 
     last_error = None
@@ -975,10 +990,8 @@ async def _generate_scripts_with_anthropic(
     test_cases: list[dict], model: str,
     api_key: str | None = None, retries: int = MAX_RETRIES
 ) -> tuple[list[dict], dict | None]:
-    from anthropic import AsyncAnthropic
-
     key = _get_anthropic_key(api_key)
-    client = AsyncAnthropic(api_key=key)
+    client = _get_anthropic_client(key)
     tool_schema = _get_script_tool_schema()
 
     last_error = None

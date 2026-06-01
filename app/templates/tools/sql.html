@@ -1,0 +1,69 @@
+{% extends "core/base.html" %}
+{% block title %}TestCaseAI - SQL 查询{% endblock %}
+{% block content %}
+
+<main id="mainContent">
+    <section class="content-page active" id="page-sql">
+        <div class="page-hero">
+            <h2>SQL 查询工具 <small>导入 CSV，执行 SQL 查询，验证数据场景</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-accent btn-sm" id="btnSqlImport"><i class="bi bi-upload"></i> 导入 CSV</button>
+            </div>
+        </div>
+        <div class="sql-layout">
+            <div class="sql-editor-pane">
+                <div class="sql-toolbar">
+                    <button class="btn btn-accent btn-sm" id="btnSqlExecute"><i class="bi bi-play-fill"></i> 执行 (Ctrl+Enter)</button>
+                    <button class="btn btn-ghost btn-sm" id="btnSqlClear"><i class="bi bi-eraser"></i> 清空</button>
+                    <span class="sql-status" id="sqlStatus"></span>
+                </div>
+                <div class="sql-editor-wrap" id="sqlEditorWrap">
+                    <textarea id="sqlEditor" placeholder="SELECT * FROM users; -- Ctrl+Enter 执行"></textarea>
+                </div>
+            </div>
+            <div class="sql-sidebar">
+                <div class="sql-schema-panel">
+                    <div class="sql-sidebar-title">表结构 <button class="btn btn-ghost btn-sm" id="btnSqlRefreshSchema"><i class="bi bi-arrow-clockwise"></i></button></div>
+                    <div id="sqlSchemaTree" class="sql-schema-tree"></div>
+                </div>
+            </div>
+        </div>
+        <div class="sql-results-panel" id="sqlResultsPanel" style="display:none;">
+            <div class="sql-results-toolbar">
+                <span><strong id="sqlResultCount">0</strong> 行</span>
+                <span class="sql-status-sep">|</span>
+                <span id="sqlExecTime">0 ms</span>
+            </div>
+            <div class="sql-results-table-wrap">
+                <table class="sql-results-table" id="sqlResultsTable">
+                    <thead id="sqlResultsHead"></thead>
+                    <tbody id="sqlResultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sql-error-panel" id="sqlErrorPanel" style="display:none;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <span id="sqlErrorMessage"></span>
+        </div>
+    </section>
+</main>
+
+{% endblock %}
+{% block extra_js %}
+<script src="/static/js/modules/sql.js?v=2"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Initialize SQL tool on this standalone page
+    if (typeof initSqlTool === "function") {
+        setTimeout(() => {
+            initSqlTool();
+            if (typeof window.initSqlCm === "function") window.initSqlCm();
+            if (!window.schemaLoaded && typeof window.loadSqlSchema === "function") {
+                window.loadSqlSchema();
+                window.schemaLoaded = true;
+            }
+        }, 100);
+    }
+});
+</script>
+{% endblock %}

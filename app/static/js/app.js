@@ -1,65 +1,29 @@
-/**
- * Intelligent Test Case Generator — 3-Page Sidebar Edition
- * v6 — Dark mode, undo/redo, import, diff view, batch ops, templates
- */
-
-const FIELD_DEFS = [
-    { key: "case_id", label: "用例编号", type: "text" },
-    { key: "module", label: "三级模块名称", type: "text" },
-    { key: "sub_module", label: "子模块", type: "text" },
-    { key: "title", label: "用例标题", type: "text" },
-    { key: "preconditions", label: "前置条件", type: "textarea" },
-    { key: "steps", label: "测试步骤", type: "textarea" },
-    { key: "expected_result", label: "预期结果", type: "textarea" },
-    { key: "keywords", label: "关键字/标签", type: "text" },
-    { key: "priority", label: "优先级", type: "select", options: ["P0", "P1", "P2", "P3"] },
-    { key: "category", label: "用例类型", type: "combo", options: ["功能测试", "接口测试", "性能测试", "安全测试", "兼容性测试", "UI测试", "回归测试", "冒烟测试", "Positive", "Negative", "Boundary"] },
-    { key: "applicable_phase", label: "适用阶段", type: "text" },
-    { key: "description", label: "用例说明", type: "textarea" },
-    { key: "reviewer", label: "由谁评审", type: "text" },
-    { key: "test_method", label: "测试方法", type: "combo", options: ["手工测试", "自动化测试", "半自动化测试"] },
-    { key: "estimated_time", label: "预计执行时间", type: "text" },
-    { key: "notes", label: "其他/备注", type: "textarea" },
-    { key: "test_frequency", label: "测试频率", type: "text" },
-    { key: "test_level", label: "测试级别", type: "select", options: ["单元测试", "集成测试", "系统测试", "验收测试"] },
-    { key: "duration", label: "时长", type: "text" },
-    { key: "tags", label: "标签", type: "text" },
-    { key: "review_status", label: "评审状态", type: "select", options: ["draft", "pending_review", "approved", "needs_changes"] },
-    { key: "review_comment", label: "评审意见", type: "textarea" },
-    { key: "execution_status", label: "执行状态", type: "select", options: ["not_executed", "pass", "fail", "blocked"] },
-];
-
-const ALL_FIELD_KEYS = FIELD_DEFS.map(f => f.key);
-const FIELD_BY_KEY = Object.fromEntries(FIELD_DEFS.map(f => [f.key, f]));
-
-const DEFAULT_TABLE_FIELDS = ["case_id", "module", "sub_module", "title", "priority", "category", "test_method", "test_level", "tags", "review_status", "execution_status"];
-
-const STORAGE_KEY = "itg_testcases";
-const STORAGE_REQ_KEY = "itg_requirement";
-const STORAGE_FIELDS_KEY = "itg_selected_fields";
-const STORAGE_THEME_KEY = "itg_theme";
-const STORAGE_RECOVERY_KEY = "itg_recovery_backup";
-const UNDO_MAX = 50;
-
-const BATCH_FIELD_OPTIONS = {
-    priority: ["P0", "P1", "P2", "P3"],
-    category: ["功能测试", "接口测试", "性能测试", "安全测试", "兼容性测试", "UI测试", "回归测试", "冒烟测试", "Positive", "Negative", "Boundary"],
-    test_method: ["手工测试", "自动化测试", "半自动化测试"],
-    test_level: ["单元测试", "集成测试", "系统测试", "验收测试"],
-    review_status: ["draft", "pending_review", "approved", "needs_changes"],
-    execution_status: ["not_executed", "pass", "fail", "blocked"],
-};
-
-const TEMPLATES = [
-    { name: "登录功能", desc: "用户名/密码/验证码/锁定", icon: "bi-box-arrow-in-right" },
-    { name: "CRUD 操作", desc: "创建/读取/更新/删除", icon: "bi-table" },
-    { name: "表单验证", desc: "必填/格式/边界值", icon: "bi-input-cursor-text" },
-    { name: "文件上传", desc: "类型/大小/数量限制", icon: "bi-upload" },
-    { name: "搜索筛选", desc: "关键词/多条件/分页", icon: "bi-search" },
-    { name: "权限控制", desc: "角色/权限/越权", icon: "bi-shield-lock" },
-    { name: "API 接口", desc: "请求/响应/异常/超时", icon: "bi-hdd-rack" },
-    { name: "数据导出", desc: "格式/筛选/大数据量", icon: "bi-download" },
-];
+/* ==========================================================================
+ * TestCaseAI — Main Application Module
+ *
+ * Sections:
+ *   1. DOM refs & state          ~line 2
+ *   2. Theme toggle              ~line 280
+ *   3. Sidebar navigation        ~line 296
+ *   4. API settings              ~line 380
+ *   5. Event bindings            ~line 413
+ *   6. Dependency search         ~line 680
+ *   7. Generate / Stream         ~line 920
+ *   8. Polish                    ~line 1084
+ *   9. Field chips               ~line 1226
+ *   10. Detail modal             ~line 1274
+ *   11. Table data sync          ~line 1325
+ *   12. Row operations           ~line 1348
+ *   13. Batch operations         ~line 1467
+ *   14. Import                   ~line 1756
+ *   15. Templates                ~line 1986
+ *   16. Export                   ~line 2097
+ *   17. Persistence              ~line 2138
+ *   18. Library (folder/set CRUD)~line 2185
+ *   19. Filter                   ~line 3364
+ *   20. Card view                ~line 3553
+ *   21. Tag cloud                ~line 3641
+ * ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
     // ---- DOM refs ----
@@ -84,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSaveDetail = document.getElementById("btnSaveDetail");
     const btnImport = document.getElementById("btnImport");
     const btnTemplate = document.getElementById("btnTemplate");
-    const btnThemeToggle = document.getElementById("btnThemeToggle");
     const btnBatchClear = document.getElementById("btnBatchClear");
     const batchBar = document.getElementById("batchBar");
     const batchCount = document.getElementById("batchCount");
@@ -284,25 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (confirmModalBs) confirmModalBs.hide();
     }
 
-    function toast(msg, type) {
-        const existing = document.querySelector(".toast-notify");
-        if (existing) existing.remove();
-        const el = document.createElement("div");
-        el.className = "toast-notify " + (type || "");
-        el.innerHTML = '<i class="bi bi-' + (type === "success" ? "check-circle" : "exclamation-circle") + '"></i> ' + escHtml(msg);
-        document.body.appendChild(el);
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 2600);
-    }
-
     // ---- Init ----
     (function init() {
-        try {
-            const savedTheme = localStorage.getItem(STORAGE_THEME_KEY);
-            if (savedTheme === "dark") {
-                document.documentElement.setAttribute("data-theme", "dark");
-                if (btnThemeToggle) btnThemeToggle.innerHTML = '<i class="bi bi-sun"></i>';
-            }
-        } catch (_) {}
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -347,38 +293,36 @@ document.addEventListener("DOMContentLoaded", () => {
         renderTemplates();
     })();
 
+    // Refresh home page after restoring localStorage values
+    try { if (typeof window.refreshHomePage === "function") window.refreshHomePage(); } catch (_) {}
+
     detailModal = new bootstrap.Modal(document.getElementById("detailModal"));
     ensureDatalists();
 
-    // ---- Theme toggle ----
-    if (btnThemeToggle) {
-        btnThemeToggle.addEventListener("click", () => {
-            const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-            if (isDark) {
-                document.documentElement.removeAttribute("data-theme");
-                btnThemeToggle.innerHTML = '<i class="bi bi-moon-stars"></i>';
-                try { localStorage.setItem(STORAGE_THEME_KEY, "light"); } catch (_) {}
-            } else {
-                document.documentElement.setAttribute("data-theme", "dark");
-                btnThemeToggle.innerHTML = '<i class="bi bi-sun"></i>';
-                try { localStorage.setItem(STORAGE_THEME_KEY, "dark"); } catch (_) {}
-            }
-        });
-    }
-
     // ---- Sidebar navigation ----
     document.querySelectorAll(".nav-item").forEach(item => {
-        item.addEventListener("click", () => navigateTo(item.dataset.page));
+        item.addEventListener("click", (e) => { e.preventDefault(); navigateTo(item.dataset.page); });
     });
 
     function navigateTo(page) {
         document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-        document.querySelectorAll(".content-page").forEach(p => p.classList.remove("active"));
+
+        const current = document.querySelector(".content-page.active");
+        const nextPage = document.getElementById(`page-${page}`);
+        if (!nextPage || current === nextPage) return;
 
         const navItem = document.querySelector(`[data-page="${page}"]`);
-        const contentPage = document.getElementById(`page-${page}`);
         if (navItem) navItem.classList.add("active");
-        if (contentPage) contentPage.classList.add("active");
+
+        // Exit current page with animation
+        if (current) {
+            current.classList.remove("active");
+            current.classList.add("page-exit");
+            setTimeout(() => current.classList.remove("page-exit"), 250);
+        }
+
+        // Enter next page — CSS animation fires automatically on .active
+        nextPage.classList.add("active");
 
         if (page === "export") updateExportInfo();
         if (page === "home") refreshHomePage();
@@ -550,9 +494,47 @@ document.addEventListener("DOMContentLoaded", () => {
             toast(`已删除 ${selected.length} 条`, "success");
         });
     });
-    // Sidebar collapse
-    document.getElementById("btnCollapseSidebar")?.addEventListener("click", () => {
-        document.getElementById("sidebar")?.classList.toggle("sidebar-collapsed");
+    // ---- Batch: Save selected to Library ----
+    document.getElementById("btnBatchSaveLib")?.addEventListener("click", async () => {
+        const selected = getSelectedCases();
+        if (selected.length === 0) { toast("请先选择用例", "warning"); return; }
+        const name = await showPrompt("保存到用例库，输入集合名称：", `批量保存 ${selected.length} 条`, "保存到用例库");
+        if (!name || !name.trim()) return;
+        try {
+            const resp = await fetch("/api/library/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name.trim(), test_cases: selected, requirement_text: "" }),
+            });
+            if (!resp.ok) throw new Error((await resp.json()).detail?.message || "保存失败");
+            toast(`已保存 ${selected.length} 条到用例库`, "success");
+            if (typeof loadLibraryContent === "function") loadLibraryContent(null);
+        } catch (err) {
+            toast("保存失败：" + (err.message || err), "error");
+        }
+    });
+    // ---- Batch: Duplicate selected ----
+    document.getElementById("btnBatchDuplicate")?.addEventListener("click", () => {
+        const selected = getSelectedCases();
+        if (selected.length === 0) { toast("请先选择用例", "warning"); return; }
+        pushUndo();
+        const indices = selected.map(tc => testCases.indexOf(tc));
+        const toInsert = [];
+        // Iterate in reverse so insertion indexes stay valid
+        for (let i = testCases.length - 1; i >= 0; i--) {
+            if (indices.includes(i)) {
+                const dup = JSON.parse(JSON.stringify(testCases[i]));
+                toInsert.push({ index: i + 1, item: dup });
+            }
+        }
+        toInsert.sort((a, b) => b.index - a.index);
+        for (const { index, item } of toInsert) {
+            testCases.splice(index, 0, item);
+        }
+        testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
+        saveToStorage();
+        rerender();
+        toast(`已复制 ${selected.length} 条`, "success");
     });
 
     // View toggle
@@ -661,7 +643,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (results.length === 0) {
-            container.innerHTML = '<div class="dep-empty"><i class="bi bi-inbox"></i><p>无匹配用例</p></div>';
+            container.innerHTML = '<div class="empty-state empty-state-sm"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">无匹配用例</p></div>';
             return;
         }
         let html = "";
@@ -810,7 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 breadcrumb.innerHTML = '<span class="dep-breadcrumb-link">' + escHtml(folderLabel) + '</span>';
             }
             if (sets.length === 0) {
-                resultsEl.innerHTML = '<div class="dep-empty"><p class="mb-0">此文件夹下无集合</p></div>';
+                resultsEl.innerHTML = '<div class="empty-state empty-state-sm"><p class="empty-state-desc">此文件夹下无集合</p></div>';
                 return;
             }
             let html = "";
@@ -866,7 +848,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (selBtn) selBtn.addEventListener("click", () => selectSetDependency(setId, setName));
             }
             if (cases.length === 0) {
-                resultsEl.innerHTML = '<div class="dep-empty"><p class="mb-0">此集合无用例</p></div>';
+                resultsEl.innerHTML = '<div class="empty-state empty-state-sm"><p class="empty-state-desc">此集合无用例</p></div>';
                 return;
             }
             let html = "";
@@ -1053,6 +1035,21 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (evt.warnings && evt.warnings.length > 0) {
                                     evt.warnings.forEach(w => toast(w, "warning"));
                                 }
+                                // Auto-save to history
+                                try {
+                                    const historyText = text;
+                                    if (historyText && testCases.length > 0) {
+                                        fetch("/api/history", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({
+                                                requirement_text: historyText,
+                                                test_cases: testCases,
+                                                model: effectiveModel,
+                                            }),
+                                        }).catch(() => {});
+                                    }
+                                } catch (_) {}
                             } else if (evt.type === "error") {
                                 throw new Error(evt.message || "生成失败");
                             }
@@ -1434,23 +1431,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return [...new Set(indices)].sort((a, b) => a - b).map(i => testCases[i]);
     }
 
-    function doBatchExport(selected) {
+    async function doBatchExport(selected) {
+        const btn = document.getElementById("btnBatchExport");
+        setBtnLoading(btn, true);
         const filename = `selected_cases_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`;
-        fetch("/api/export/xlsx", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ test_cases: selected, filename }),
-        }).then(resp => {
+        try {
+            const resp = await fetch("/api/export/xlsx", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ test_cases: selected, filename }),
+            });
             if (!resp.ok) throw new Error("导出失败");
-            return resp.blob();
-        }).then(blob => {
+            const blob = await resp.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url; a.download = filename;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
             toast(`已导出 ${selected.length} 条用例`, "success");
-        }).catch(err => toast(err.message, "error"));
+        } catch (err) {
+            toast(err.message, "error");
+        } finally {
+            setBtnLoading(btn, false);
+        }
     }
 
     function updateSelectAllState() {
@@ -1525,6 +1528,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (action === "append") showBatchAppendDialog();
                     else if (action === "replace") showBatchReplaceDialog();
                     else if (action === "fill") showBatchFillDialog();
+                    else if (action === "clear") showBatchClearDialog();
                 });
             });
         }
@@ -1633,6 +1637,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function showBatchClearDialog() {
+        const indices = getCheckedIndices();
+        if (indices.length === 0) { toast("请先选择用例", "warning"); return; }
+        const clearable = FIELD_DEFS.filter(f => f.key !== "case_id" && f.key !== "title").map(f => f.key);
+        showBatchEditForm("清除字段", clearable, [
+            { id: "confirm", label: "", type: "text", required: false, placeholder: "将清空所选用例的该字段", value: "" }
+        ], (data) => {
+            pushUndo();
+            for (const i of indices) {
+                testCases[i][data.field] = FIELD_DEFS.find(f => f.key === data.field)?.type === "select" && FIELD_BY_KEY[data.field]?.options ? FIELD_BY_KEY[data.field].options[0] : "";
+            }
+            saveToStorage();
+            rerender();
+            toast(`已清除 ${indices.length} 条用例的「${FIELD_BY_KEY[data.field]?.label || data.field}」`, "success");
+        });
+        // Hide the useless extra field
+        const extra = document.querySelector(".batch-edit-overlay .be-confirm");
+        if (extra) extra.closest(".mb-3")?.style.setProperty("display", "none");
+    }
+
     function showBatchEditForm(title, fieldOptions, extraFields, onConfirm) {
         // Remove existing overlay if any
         const old = document.querySelector(".batch-edit-overlay");
@@ -1735,8 +1759,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const file = e.target.files[0];
         if (!file) return;
         const ext = file.name.split(".").pop().toLowerCase();
-        if (!["csv", "xlsx", "xls"].includes(ext)) {
-            await showAlert("仅支持 .csv / .xlsx / .xls 文件");
+        if (!["csv", "xlsx", "xls", "json"].includes(ext)) {
+            await showAlert("仅支持 .csv / .xlsx / .xls / .json 文件");
             e.target.value = "";
             return;
         }
@@ -1748,6 +1772,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (ext === "csv") {
                     const text = reader.result;
                     rows = parseCSV(text);
+                } else if (ext === "json") {
+                    const text = reader.result;
+                    const parsed = JSON.parse(text);
+                    if (!Array.isArray(parsed)) throw new Error("JSON 文件应包含一个对象数组");
+                    // Convert array of objects to 2D array (header + rows)
+                    if (parsed.length === 0) throw new Error("JSON 数组为空");
+                    const headers = Object.keys(parsed[0]);
+                    rows = [headers];
+                    parsed.forEach(obj => {
+                        rows.push(headers.map(h => String(obj[h] ?? "")));
+                    });
                 } else {
                     const wb = XLSX.read(new Uint8Array(reader.result), { type: "array" });
                     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -1889,6 +1924,8 @@ document.addEventListener("DOMContentLoaded", () => {
         importToLibFolderId = null;
         const name = "导入 " + new Date().toLocaleDateString("zh-CN") + " " + new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 
+        const btn = document.getElementById("btnImportToLibNow");
+        setBtnLoading(btn, true);
         try {
             const resp = await fetch("/api/library/save", {
                 method: "POST",
@@ -1902,6 +1939,8 @@ document.addEventListener("DOMContentLoaded", () => {
             loadLibraryContent(fid);
         } catch (err) {
             await showAlert("导入到用例库失败：" + (err.message || err));
+        } finally {
+            setBtnLoading(btn, false);
         }
     }
 
@@ -2073,7 +2112,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!filename.endsWith(ext)) filename += ext;
 
         const exportBtn = format === "xlsx" ? btnExportXLSX : btnExportCSV;
-        exportBtn.disabled = true;
+        setBtnLoading(exportBtn, true);
 
         try {
             const resp = await fetch(`/api/export/${format}`, {
@@ -2093,7 +2132,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             showError(err.message || "导出失败。");
         } finally {
-            exportBtn.disabled = false;
+            setBtnLoading(exportBtn, false);
         }
     }
 
@@ -2183,6 +2222,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const folderIdSel = document.getElementById("saveToLibFolder");
         const folderId = folderIdSel.value ? parseInt(folderIdSel.value) : null;
         const reqText = document.getElementById("requirementText")?.value || "";
+        const btn = document.getElementById("btnSaveToLibConfirm");
+        setBtnLoading(btn, true);
         try {
             const resp = await fetch("/api/library/save", {
                 method: "POST",
@@ -2194,6 +2235,8 @@ document.addEventListener("DOMContentLoaded", () => {
             toast("已保存到用例库", "success");
         } catch (err) {
             showError("保存到库失败：" + (err.message || err));
+        } finally {
+            setBtnLoading(btn, false);
         }
     }
 
@@ -2205,12 +2248,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function refreshLibraryTree() {
+        const btn = document.getElementById("btnRefreshLibTree");
+        if (btn) btn.disabled = true;
         try {
             const resp = await fetch("/api/library/folders");
             const data = await resp.json();
             renderLibraryTree(data.folders || [], currentLibFolderId);
         } catch (_) {
             document.getElementById("libraryTree").innerHTML = '<div class="text-muted small p-2">加载失败</div>';
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -2318,12 +2365,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 const fid = parseInt(this.dataset.fid);
                 const name = this.closest(".tree-item").querySelector(".tree-label").textContent;
                 if (!(await showConfirm(`确定删除文件夹「${name}」？<br>子文件夹将一并删除，集合将移至根目录。`))) return;
+                btn.disabled = true;
                 try {
                     await fetch(`/api/library/folders/${fid}`, { method: "DELETE" });
                     toast("已删除文件夹", "success");
                     refreshLibraryTree();
                     loadLibraryContent(currentLibFolderId);
-                } catch (_) { toast("删除失败", "warning"); }
+                } catch (_) {
+                    toast("删除失败", "warning");
+                    btn.disabled = false;
+                }
             });
         });
     }
@@ -2331,6 +2382,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function createFolder(parentId) {
         const name = await showPrompt("请输入文件夹名称：", "", "新建文件夹");
         if (!name || !name.trim()) return;
+        const btn = document.getElementById("btnNewFolder");
+        setBtnLoading(btn, true);
         try {
             await fetch("/api/library/folders", {
                 method: "POST",
@@ -2339,7 +2392,11 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             toast("文件夹已创建", "success");
             refreshLibraryTree();
-        } catch (_) { toast("创建失败", "warning"); }
+        } catch (_) {
+            toast("创建失败", "warning");
+        } finally {
+            setBtnLoading(btn, false);
+        }
     }
 
     // Move set between folders
@@ -2370,6 +2427,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (ids.length === 0) return;
         const sel = document.getElementById("moveSetFolder");
         const folderId = sel.value ? parseInt(sel.value) : null;
+        const btn = document.getElementById("btnMoveSetConfirm");
+        setBtnLoading(btn, true);
         let ok = 0;
         for (const id of ids) {
             try {
@@ -2381,6 +2440,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (resp.ok) ok++;
             } catch (_) {}
         }
+        setBtnLoading(btn, false);
         if (moveSetModal) moveSetModal.hide();
         moveSetTargetId = null;
         libSelectedSets.clear();
@@ -2388,224 +2448,6 @@ document.addEventListener("DOMContentLoaded", () => {
         toast(`已移动 ${ok} 个集合`, "success");
         loadLibraryContent(currentLibFolderId);
     }
-
-    async function showShareModal(setId) {
-        const name = await showPrompt("输入要共享的用户名：<br><small class='text-muted'>对方登录后可在此处看到共享的用例集（只读）</small>", "", "共享用例集");
-        if (!name || !name.trim()) return;
-        try {
-            const resp = await fetch("/api/library/" + setId + "/share", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: name.trim() }),
-            });
-            if (!resp.ok) {
-                const err = await resp.json();
-                const msg = typeof err.detail?.message === "string" ? err.detail.message
-                          : typeof err.detail === "string" ? err.detail
-                          : "共享失败";
-                throw new Error(msg);
-            }
-            const data = await resp.json();
-            toast(data.message || "共享成功", "success");
-            loadLibraryContent(currentLibFolderId);
-        } catch (err) {
-            toast("共享失败：" + (err.message || err), "danger");
-        }
-    }
-
-    // ---- Notifications ----
-    let notificationsModal = null;
-    try { notificationsModal = new bootstrap.Modal(document.getElementById("notificationsModal")); } catch (_) {}
-
-    async function loadNotifications() {
-        try {
-            const resp = await fetch("/api/notifications", { headers: getAuthHeaders() });
-            if (!resp.ok) return;
-            const data = await resp.json();
-            renderNotifications(data.notifications || []);
-            updateNotifBadge(data.unread_count || 0);
-        } catch (_) {}
-    }
-
-    function updateNotifBadge(count) {
-        const badge = document.getElementById("notifBadge");
-        if (!badge) return;
-        if (count > 0) {
-            badge.textContent = count > 99 ? "99+" : count;
-            badge.style.display = "";
-        } else {
-            badge.style.display = "none";
-        }
-    }
-
-    function renderNotifications(notifs) {
-        const container = document.getElementById("notificationsList");
-        if (!container) return;
-        if (!notifs.length) {
-            container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无消息</div>';
-            return;
-        }
-        let html = "";
-        for (const n of notifs) {
-            const isPending = n.status === "pending";
-            const isFriendReq = n.type === "friend_request";
-            const statusLabel = n.status === "pending" ? "待处理" : n.status === "accepted" ? "已接受" : n.status === "declined" ? "已拒绝" : n.status;
-            const icon = isFriendReq ? "bi-person-plus" : "bi-share";
-            html += '<div class="notif-item d-flex align-items-start gap-3 p-3 mb-2 rounded border">';
-            html += '<i class="' + icon + ' fs-4 mt-1" style="color:var(--color-accent)"></i>';
-            html += '<div class="flex-grow-1">';
-            html += '<div class="fw-medium">' + escHtml(n.message || "") + '</div>';
-            html += '<small class="text-muted">' + escHtml(n.created_at || "") + ' · ' + statusLabel + '</small>';
-            html += '</div>';
-            if (isPending) {
-                html += '<div class="d-flex gap-1">';
-                html += '<button class="btn btn-sm btn-outline-success notif-accept" data-id="' + n.id + '"><i class="bi bi-check-lg"></i> 接受</button>';
-                html += '<button class="btn btn-sm btn-outline-danger notif-decline" data-id="' + n.id + '"><i class="bi bi-x-lg"></i> 拒绝</button>';
-                html += '</div>';
-            }
-            html += '</div>';
-        }
-        container.innerHTML = html;
-        container.querySelectorAll(".notif-accept").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-                try {
-                    const resp = await fetch("/api/notifications/" + id + "/accept", { method: "POST", headers: getAuthHeaders() });
-                    const data = await resp.json();
-                    toast(data.message || "已接受", "success");
-                    loadNotifications();
-                } catch (err) {
-                    toast("操作失败：" + (err.message || err), "danger");
-                }
-            });
-        });
-        container.querySelectorAll(".notif-decline").forEach(btn => {
-            btn.addEventListener("click", async () => {
-                const id = btn.dataset.id;
-                try {
-                    const resp = await fetch("/api/notifications/" + id + "/decline", { method: "POST", headers: getAuthHeaders() });
-                    const data = await resp.json();
-                    toast(data.message || "已拒绝", "info");
-                    loadNotifications();
-                } catch (err) {
-                    toast("操作失败：" + (err.message || err), "danger");
-                }
-            });
-        });
-    }
-
-    // ---- Contacts ----
-    let contactsModal = null;
-    try { contactsModal = new bootstrap.Modal(document.getElementById("contactsModal")); } catch (_) {}
-
-    async function loadContacts() {
-        const container = document.getElementById("contactsList");
-        if (!container) return;
-        try {
-            const resp = await fetch("/api/contacts", { headers: getAuthHeaders() });
-            if (!resp.ok) { container.innerHTML = '<div class="text-center text-muted py-3">加载失败</div>'; return; }
-            const data = await resp.json();
-            const contacts = data.contacts || [];
-            if (!contacts.length) {
-                container.innerHTML = '<div class="text-center text-muted py-3">暂无联系人</div>';
-                return;
-            }
-            let html = "";
-            for (const c of contacts) {
-                html += '<div class="d-flex align-items-center gap-2 p-2 rounded border mb-1 contact-item">';
-                html += '<i class="bi bi-person-circle fs-5"></i>';
-                html += '<span class="flex-grow-1">' + escHtml(c.username) + '</span>';
-                html += '<button class="btn btn-sm btn-outline-danger contact-remove" data-id="' + c.id + '" title="删除联系人"><i class="bi bi-person-x"></i></button>';
-                html += '</div>';
-            }
-            container.innerHTML = html;
-            container.querySelectorAll(".contact-remove").forEach(btn => {
-                btn.addEventListener("click", async () => {
-                    const cid = btn.dataset.id;
-                    if (!(await showConfirm("确定删除此联系人？"))) return;
-                    try {
-                        const resp = await fetch("/api/contacts/" + cid, { method: "DELETE", headers: getAuthHeaders() });
-                        if (!resp.ok) throw new Error("删除失败");
-                        toast("已删除联系人", "info");
-                        loadContacts();
-                    } catch (err) {
-                        toast("删除失败：" + (err.message || err), "danger");
-                    }
-                });
-            });
-            // Click on a contact copies username to clipboard for sharing
-            container.querySelectorAll(".contact-item").forEach(item => {
-                item.style.cursor = "pointer";
-                item.addEventListener("dblclick", () => {
-                    const username = item.querySelector("span")?.textContent || "";
-                    if (username) {
-                        navigator.clipboard.writeText(username).then(() => {
-                            toast("已复制用户名：" + username, "info");
-                        }).catch(() => {});
-                    }
-                });
-            });
-        } catch (_) {
-            container.innerHTML = '<div class="text-center text-muted py-3">加载失败</div>';
-        }
-    }
-
-    document.getElementById("btnAddContact")?.addEventListener("click", async () => {
-        const input = document.getElementById("contactSearchInput");
-        if (!input || !input.value.trim()) { toast("请输入用户名", "warning"); return; }
-        try {
-            const resp = await fetch("/api/contacts/add", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-                body: JSON.stringify({ username: input.value.trim() }),
-            });
-            const data = await resp.json();
-            if (!resp.ok) throw new Error(data.detail?.message || "添加失败");
-            toast(data.message || "好友请求已发送", "success");
-            input.value = "";
-            loadNotifications(); // refresh notifications to show the request
-        } catch (err) {
-            toast("添加失败：" + (err.message || err), "danger");
-        }
-    });
-    document.getElementById("contactSearchInput")?.addEventListener("keydown", e => {
-        if (e.key === "Enter") document.getElementById("btnAddContact")?.click();
-    });
-
-    // ---- Notification bell click ----
-    document.getElementById("btnNotifications")?.addEventListener("click", () => {
-        loadNotifications();
-        if (notificationsModal) notificationsModal.show();
-    });
-
-    // ---- Contacts button click ----
-    document.getElementById("btnContacts")?.addEventListener("click", () => {
-        loadContacts();
-        if (contactsModal) contactsModal.show();
-    });
-
-    // Periodically poll for new notifications
-    let notifPollInterval = null;
-    function startNotifPolling() {
-        stopNotifPolling();
-        loadNotifications(); // initial load
-        notifPollInterval = setInterval(loadNotifications, 30000); // every 30s
-    }
-    function stopNotifPolling() {
-        if (notifPollInterval) { clearInterval(notifPollInterval); notifPollInterval = null; }
-    }
-
-    // Update auth UI to show notification/contacts buttons when logged in
-    const _origUpdateAuthUI = window.updateAuthUI;
-    window.updateAuthUI = function() {
-        if (typeof _origUpdateAuthUI === "function") _origUpdateAuthUI();
-        const notifBtn = document.getElementById("btnNotifications");
-        const contactBtn = document.getElementById("btnContacts");
-        const isLoggedIn = window.currentUser && window.currentUser.id > 0;
-        if (notifBtn) notifBtn.style.display = isLoggedIn ? "" : "none";
-        if (contactBtn) contactBtn.style.display = isLoggedIn ? "" : "none";
-        if (isLoggedIn) { startNotifPolling(); } else { stopNotifPolling(); updateNotifBadge(0); }
-    };
 
     // Update share modal to show contacts
     showShareModal = function(setId) {
@@ -2672,6 +2514,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function createEmptySet(folderId) {
         const name = await showPrompt("新建用例集名称：", "用例集 " + new Date().toLocaleDateString("zh-CN"), "新建用例集");
         if (!name || !name.trim()) return;
+        const btn = document.getElementById("btnNewLibSet");
+        if (btn) btn.disabled = true;
         try {
             await fetch("/api/library/save", {
                 method: "POST",
@@ -2680,7 +2524,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             toast("已创建空用例集", "success");
             loadLibraryContent(folderId);
-        } catch (_) { toast("创建失败", "warning"); }
+        } catch (_) {
+            toast("创建失败", "warning");
+            if (btn) btn.disabled = false;
+        }
     }
 
     // Import file into the current library folder
@@ -2730,6 +2577,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function batchDeleteSets() {
         if (libSelectedSets.size === 0) return;
         if (!(await showConfirm(`确定删除选中的 ${libSelectedSets.size} 个集合？此操作不可恢复。`))) return;
+        const btn = document.getElementById("btnLibBatchDelete");
+        if (btn) btn.disabled = true;
         let ok = 0;
         for (const id of libSelectedSets) {
             try {
@@ -2761,6 +2610,10 @@ document.addEventListener("DOMContentLoaded", () => {
         updateLibBatchUI();
     }
 
+    // Pagination state for library
+    const LIB_PAGE_SIZE = 20;
+    let _libPageOffset = 0;
+
     async function loadLibraryContent(folderId) {
         const pane = document.getElementById("libraryContentPane");
         if (!pane) return;
@@ -2789,7 +2642,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toolbar += '</div>';
 
         function navigateToFolder(fid, name) {
-            // Update tree selection
+            _libPageOffset = 0;
             const treeEl = document.getElementById("libraryTree");
             if (treeEl) {
                 treeEl.querySelectorAll(".tree-item.selected").forEach(el => el.classList.remove("selected"));
@@ -2801,11 +2654,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            // Fetch both sets and child folders in parallel
             let setsUrl = `/api/library/list`;
             const params = [];
             if (folderId !== null && folderId !== undefined) params.push(`folder_id=${folderId}`);
             if (q) params.push(`q=${encodeURIComponent(q)}`);
+            params.push(`limit=${LIB_PAGE_SIZE}`, `offset=${_libPageOffset}`);
             if (params.length) setsUrl += '?' + params.join('&');
             const [setsResp, foldersResp] = await Promise.all([
                 fetch(setsUrl),
@@ -2848,7 +2701,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Sets section
             if (sets.length === 0 && childFolders.length === 0) {
-                body += '<div class="lib-empty"><i class="bi bi-inbox"></i><p>此文件夹下无内容</p></div>';
+                body += '<div class="empty-state empty-state-sm"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">此文件夹下无内容</p></div>';
             } else if (sets.length > 0) {
                 body += '<div class="lib-list">';
                 body += '<div class="lib-list-header"><label class="lib-check-label"><input type="checkbox" id="libSelectAll"> 全选</label></div>';
@@ -2874,6 +2727,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 body += '</div>';
             }
             pane.innerHTML = toolbar + body;
+
+            const total = setsData.total || 0;
+            // Pagination bar
+            if (total > LIB_PAGE_SIZE) {
+                const totalPages = Math.ceil(total / LIB_PAGE_SIZE);
+                const currentPage = Math.floor(_libPageOffset / LIB_PAGE_SIZE) + 1;
+                const paginationHtml = `
+                <div class="pagination-bar mt-2 d-flex align-items-center justify-content-between px-2 py-1">
+                    <small class="text-muted">共 ${total} 个集合</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-ghost btn-sm ${_libPageOffset <= 0 ? 'disabled' : ''}" id="btnLibPrevPage" ${_libPageOffset <= 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i> 上一页</button>
+                        <small class="text-muted">第 ${currentPage}/${totalPages} 页</small>
+                        <button class="btn btn-ghost btn-sm ${_libPageOffset + LIB_PAGE_SIZE >= total ? 'disabled' : ''}" id="btnLibNextPage" ${_libPageOffset + LIB_PAGE_SIZE >= total ? 'disabled' : ''}>下一页 <i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>`;
+                pane.insertAdjacentHTML('beforeend', paginationHtml);
+                document.getElementById("btnLibPrevPage")?.addEventListener("click", () => {
+                    _libPageOffset = Math.max(0, _libPageOffset - LIB_PAGE_SIZE);
+                    loadLibraryContent(folderId);
+                });
+                document.getElementById("btnLibNextPage")?.addEventListener("click", () => {
+                    _libPageOffset += LIB_PAGE_SIZE;
+                    loadLibraryContent(folderId);
+                });
+            } else {
+                _libPageOffset = 0;
+            }
 
             const setCount = sets.length;
             const folderCount = childFolders.length;
@@ -2912,6 +2792,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 searchInput.addEventListener("input", () => {
                     clearTimeout(searchTimer);
                     searchTimer = setTimeout(() => {
+                        _libPageOffset = 0;
                         loadLibraryContent(folderId);
                     }, 300);
                 });
@@ -2934,7 +2815,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             });
             pane.querySelectorAll(".lib-load").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); loadFromLibrary(parseInt(btn.dataset.id)); });
+                btn.addEventListener("click", e => { e.stopPropagation(); loadFromLibrary(parseInt(btn.dataset.id), btn); });
             });
             pane.querySelectorAll(".lib-share").forEach(btn => {
                 btn.addEventListener("click", e => { e.stopPropagation(); showShareModal(parseInt(btn.dataset.id)); });
@@ -2943,21 +2824,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 btn.addEventListener("click", e => { e.stopPropagation(); showMoveModal(parseInt(btn.dataset.id)); });
             });
             pane.querySelectorAll(".lib-delete").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); deleteFromLibrary(parseInt(btn.dataset.id)); });
+                btn.addEventListener("click", e => { e.stopPropagation(); deleteFromLibrary(parseInt(btn.dataset.id), btn); });
             });
         } catch (err) {
-            pane.innerHTML = toolbar + '<div class="lib-empty"><i class="bi bi-exclamation-triangle"></i><p>加载失败：' + escHtml(err.message || err) + '</p></div>';
+            pane.innerHTML = toolbar + '<div class="empty-state empty-state-sm"><i class="bi bi-exclamation-triangle empty-state-icon"></i><p class="empty-state-desc">加载失败：' + escHtml(err.message || err) + '</p></div>';
         }
     }
 
-    async function loadFromLibrary(id) {
+    async function loadFromLibrary(id, btn) {
+        if (btn) btn.disabled = true;
         try {
             const resp = await fetch("/api/library/" + id);
             if (!resp.ok) throw new Error((await resp.json()).detail?.message || "加载失败");
             const data = await resp.json();
             const cases = data.test_cases || [];
 
-            if (cases.length === 0) { toast("该集合内无用例", "warning"); return; }
+            if (cases.length === 0) { toast("该集合内无用例", "warning"); if (btn) btn.disabled = false; return; }
+            if (btn) btn.disabled = false;
 
             if (testCases.length === 0) {
                 // No current cases — load directly
@@ -3023,6 +2906,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showChoice();
             loadModal.show();
         } catch (err) {
+            if (btn) btn.disabled = false;
             showError("加载用例失败：" + (err.message || err));
         }
     }
@@ -3049,8 +2933,9 @@ document.addEventListener("DOMContentLoaded", () => {
         toast("已加载「" + data.name + "」(" + cases.length + " 条)", "success");
     }
 
-    async function deleteFromLibrary(id) {
+    async function deleteFromLibrary(id, btn) {
         if (!(await showConfirm("确定从用例库中删除此条目？此操作不可恢复。"))) return;
+        if (btn) btn.disabled = true;
         try {
             const resp = await fetch("/api/library/" + id, { method: "DELETE" });
             if (!resp.ok) throw new Error((await resp.json()).detail?.message || "删除失败");
@@ -3058,6 +2943,8 @@ document.addEventListener("DOMContentLoaded", () => {
             loadLibraryContent(currentLibFolderId);
         } catch (err) {
             showError("删除失败：" + (err.message || err));
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -3071,18 +2958,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 html += `<datalist id="dl_${f.key}">${f.options.map(o => `<option value="${o}">`).join("")}</datalist>`;
         }
         container.innerHTML = html;
-    }
-
-    function setBtnLoading(btn, loading) {
-        if (!btn) return;
-        if (loading) {
-            if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + (btn.dataset.loadingText || '处理中...');
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = btn.dataset.origHtml || btn.innerHTML;
-        }
     }
 
     let _progressTimer = null;
@@ -3119,43 +2994,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function hideResults() {
         if (resultsArea) resultsArea.style.display = "none";
     }
-    function escHtml(str) {
-        const div = document.createElement("div");
-        div.textContent = String(str ?? "");
-        return div.innerHTML;
-    }
-
-    async function fetchWithRetry(url, options, retries = 3) {
-        const timeout = options?.timeout || 120000;
-        for (let attempt = 1; attempt <= retries; attempt++) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), timeout);
-                const resp = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(timeoutId);
-                return resp;
-            } catch (err) {
-                clearTimeout(timeoutId);
-                if (attempt === retries) throw err;
-                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
-                await new Promise(r => setTimeout(r, delay));
-            }
-        }
-    }
-
-    async function apiFetch(url, options = {}) {
-        const resp = await fetch(url, {
-            headers: { "Content-Type": "application/json", ...options.headers },
-            ...options,
-        });
-        if (!resp.ok) {
-            let msg = "HTTP " + resp.status;
-            try { const d = await resp.json(); msg = d.detail?.message || d.detail || msg; } catch(_) {}
-            throw new Error(msg);
-        }
-        return resp.json();
-    }
-
     // ---- Custom Modal System (replaces alert/confirm/prompt) ----
     let _confirmResolve = null;
     let _promptResolve = null;
@@ -3224,7 +3062,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const b = document.createElement("button");
             b.className = "btn " + (btn.cls || "btn-secondary");
             b.textContent = btn.text;
-            b.addEventListener("click", () => { btn.action(); const bs = bootstrap.Modal.getInstance(el); if (bs) bs.hide(); });
+            b.addEventListener("click", async () => {
+                setBtnLoading(b, true);
+                try { await btn.action(); } catch (_) {}
+                setBtnLoading(b, false);
+                const bs = bootstrap.Modal.getInstance(el); if (bs) bs.hide();
+            });
             footer.appendChild(b);
         });
         const bsModal = new bootstrap.Modal(el);
@@ -3308,8 +3151,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const colSpan = (selectedFields.length || 1) + 3;
             tableHead.innerHTML = "<tr><th></th><th>#</th><th colspan='" + (colSpan - 2) + "'>测试用例</th></tr>";
             tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="empty-table-msg">
-                <i class="bi bi-inbox" style="font-size:2rem;"></i><p class="mt-2 mb-0">暂无测试用例。</p></td></tr>`;
-            if (cardView) cardView.innerHTML = '<div class="card-view-empty"><i class="bi bi-inbox" style="font-size:2rem;"></i><p>暂无测试用例。</p></div>';
+                <i class="bi bi-inbox" style="font-size:2rem;"></i><p>暂无测试用例。</p></td></tr>`;
+            if (cardView) cardView.innerHTML = '<div class="empty-state card-view-empty"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">暂无测试用例。</p></div>';
             return;
         }
 
@@ -3488,7 +3331,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`;
         });
         if (!html) {
-            html = '<div class="card-view-empty"><i class="bi bi-inbox" style="font-size:2rem;"></i><p>无匹配用例</p></div>';
+            html = '<div class="empty-state card-view-empty"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">无匹配用例</p></div>';
         }
         cardView.innerHTML = html;
 
@@ -3586,6 +3429,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 50);
         }
         if (page === "bugreport" && typeof window.refreshBugList === "function") window.refreshBugList();
+        if (page === "history" && typeof window.initHistoryPage === "function") window.initHistoryPage();
+        if (page === "operations" && typeof window.initOperationsPage === "function") window.initOperationsPage();
         if (page === "toolkit") { if (typeof window.switchToolkitTab === "function") window.switchToolkitTab("encoding"); if (typeof window.updateTimestamp === "function") window.updateTimestamp(); }
     };
 
@@ -3595,18 +3440,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Expose shared utilities for feature modules (loaded after app.js)
     // Wrap window exports in try block to avoid HAL-9000 crash on any single failure
     try {
-        window.toast = toast;
-        window.escHtml = escHtml;
         window.showCustomDialog = showCustomDialog;
-        window.apiFetch = apiFetch;
-        window.showError = showError;
         window.getTestCases = () => testCases;
-        window.setBtnLoading = setBtnLoading;
-        window.fetchWithRetry = fetchWithRetry;
         window.openDetailModal = openDetailModal;
         Object.defineProperty(window, 'userApiKey', { get: () => userApiKey, set: v => { userApiKey = v; } });
         Object.defineProperty(window, 'userModel', { get: () => userModel, set: v => { userModel = v; } });
-        window.showConfirm = showConfirm;
         window.navigateTo = navigateTo;
         window.undo = undo;
         window.redo = redo;

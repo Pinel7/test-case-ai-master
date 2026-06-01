@@ -14,14 +14,14 @@ def _test_env(monkeypatch):
     """Redirect all databases to a temp directory."""
     tmpdir = tempfile.mkdtemp()
     tmp = Path(tmpdir)
-    monkeypatch.setattr("app.services.database.DB_DIR", tmp)
-    monkeypatch.setattr("app.services.database.DB_PATH", tmp / "library.db")
+    monkeypatch.setattr("app.services.db_base.DB_DIR", tmp)
+    monkeypatch.setattr("app.services.db_base.DB_PATH", tmp / "library.db")
     monkeypatch.setattr("app.services.auth.DB_DIR", tmp)
     monkeypatch.setattr("app.services.auth.AUTH_DB_PATH", tmp / "auth.db")
     monkeypatch.setattr("app.services.sql_runner.TEST_DB_DIR", tmp)
     monkeypatch.setattr("app.services.sql_runner.TEST_DB_PATH", tmp / "test_data.db")
     # Re-initialize databases in the temp directory
-    from app.services.database import _init_db as init_library_db
+    from app.services.db_base import _init_db as init_library_db
     init_library_db()
     from app.services.auth import init_auth_db
     init_auth_db()

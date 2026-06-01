@@ -1,286 +1,16 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TestCaseAI</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' y='2' width='14' height='12' rx='2' fill='%234f46e5'/><path d='M4.5 8l2.5 2.5 4.5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/static/css/app.css?v=37" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" rel="stylesheet">
-</head>
-<body>
-
-<!-- ==================== LOGIN OVERLAY ==================== -->
-<div id="loginOverlay">
-    <div class="login-bg-shapes">
-        <span></span><span></span><span></span><span></span><span></span>
-    </div>
-    <div class="login-overlay-content">
-        <div class="login-overlay-brand">
-            <div class="login-overlay-logo">
-                <div class="login-overlay-logo-bg"></div>
-                <i class="bi bi-clipboard-check"></i>
-            </div>
-            <h1>TestCase<span>AI</span></h1>
-            <p class="login-overlay-subtitle">智能测试用例生成器</p>
-        </div>
-        <div class="login-overlay-box">
-            <ul class="auth-tabs-nav">
-                <li class="auth-tabs-item"><span class="auth-tabs-link active" data-amode="login">登录</span></li>
-                <li class="auth-tabs-item"><span class="auth-tabs-link" data-amode="register">注册</span></li>
-            </ul>
-            <div id="olFormLogin">
-                <div class="mb-3">
-                    <label class="form-label">用户名</label>
-                    <input type="text" id="olLoginUsername" class="form-control" placeholder="输入用户名" autocomplete="username">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">密码</label>
-                    <input type="password" id="olLoginPassword" class="form-control" placeholder="输入密码" autocomplete="current-password">
-                </div>
-                <div class="auth-error" id="olLoginError" style="display:none;"></div>
-                <button class="btn btn-primary w-100" id="btnOlLogin"><i class="bi bi-box-arrow-in-right me-1"></i> 登录</button>
-            </div>
-            <div id="olFormRegister" style="display:none;">
-                <div class="mb-3">
-                    <label class="form-label">用户名</label>
-                    <input type="text" id="olRegUsername" class="form-control" placeholder="至少3个字符" autocomplete="username">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">密码</label>
-                    <input type="password" id="olRegPassword" class="form-control" placeholder="至少6个字符" autocomplete="new-password">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">确认密码</label>
-                    <input type="password" id="olRegConfirm" class="form-control" placeholder="再次输入密码">
-                </div>
-                <div class="auth-error" id="olRegError" style="display:none;"></div>
-                <button class="btn btn-success w-100" id="btnOlRegister"><i class="bi bi-person-plus me-1"></i> 注册</button>
-            </div>
-        </div>
-        <div class="login-overlay-footer">
-            <small>由 DeepSeek &amp; Claude 驱动</small>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== SETUP GUIDE OVERLAY ==================== -->
-<div id="setupOverlay" style="display:none;">
-    <div class="setup-overlay-bg"></div>
-    <div class="setup-overlay-inner">
-        <div class="setup-overlay-header">
-            <button class="setup-close" id="btnSetupClose" title="关闭引导（稍后可在侧边栏底部 ? 按钮重新打开）"><i class="bi bi-x-lg"></i></button>
-        </div>
-        <div class="setup-steps">
-            <!-- Step 1 -->
-            <div class="setup-step">
-                <div class="setup-step-num">1</div>
-                <div class="setup-step-body">
-                    <h3>获取 API Key</h3>
-                    <p>本工具通过调用大语言模型 API 生成测试用例，您需要先申请一个 API Key。</p>
-                    <div class="setup-providers">
-                        <div class="setup-provider">
-                            <div class="setup-provider-icon"><span class="setup-provider-badge">推荐</span><i class="bi bi-robot"></i></div>
-                            <div class="setup-provider-name">DeepSeek</div>
-                            <div class="setup-provider-desc">性价比高，中文理解强，注册即送额度</div>
-                            <a href="https://platform.deepseek.com/api_keys" target="_blank" class="btn btn-sm btn-outline-light w-100">去 DeepSeek 申请 <i class="bi bi-box-arrow-up-right ms-1"></i></a>
-                        </div>
-                        <div class="setup-provider">
-                            <div class="setup-provider-icon"><i class="bi bi-lightning-charge"></i></div>
-                            <div class="setup-provider-name">Anthropic Claude</div>
-                            <div class="setup-provider-desc">更强大的生成能力，适合复杂需求</div>
-                            <a href="https://console.anthropic.com/keys" target="_blank" class="btn btn-sm btn-outline-light w-100">去 Anthropic 申请 <i class="bi bi-box-arrow-up-right ms-1"></i></a>
-                        </div>
-                    </div>
-                    <details class="setup-details">
-                        <summary>详细注册步骤（以 DeepSeek 为例）</summary>
-                        <ol class="setup-details-ol">
-                            <li>点击上方按钮，打开 <strong>platform.deepseek.com</strong></li>
-                            <li>点击右上角 <strong>「Sign Up / 注册」</strong>，用邮箱注册账号</li>
-                            <li>登录后进入 <strong>「API Keys」</strong> 页面</li>
-                            <li>点击 <strong>「创建 API Key」</strong>，复制生成的 Key（格式如 <code>sk-xxxxxxxxxxxx</code>）</li>
-                            <li>新用户通常有 <strong>¥5~10 免费额度</strong>，足够生成数百个测试用例</li>
-                        </ol>
-                    </details>
-                </div>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="setup-step">
-                <div class="setup-step-num">2</div>
-                <div class="setup-step-body">
-                    <h3>填入 API Key</h3>
-                    <p>将上一步获取的 Key 粘贴到下方输入框，系统会自动保存。</p>
-                    <div class="setup-api-key-row">
-                        <input type="password" id="setupApiKeyInput" class="form-control" placeholder="粘贴你的 API Key，如 sk-xxxxxxxxxxxx">
-                        <button class="btn btn-ghost" id="btnSetupToggleKey" title="显示/隐藏"><i class="bi bi-eye"></i></button>
-                    </div>
-                    <div class="setup-test-row">
-                        <button class="btn btn-accent" id="btnSetupTestKey"><i class="bi bi-plugin"></i> 测试连接</button>
-                        <span id="setupTestResult"></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="setup-step">
-                <div class="setup-step-num">3</div>
-                <div class="setup-step-body">
-                    <h3>选择模型</h3>
-                    <p>根据你的需求选择合适的模型：</p>
-                    <div class="setup-models">
-                        <label class="setup-model" data-model="deepseek-chat">
-                            <input type="radio" name="setupModel" value="deepseek-chat" checked>
-                            <div class="setup-model-body">
-                                <strong>DeepSeek-Chat</strong>
-                                <small>默认模型，速度快，性价比高，中文友好</small>
-                            </div>
-                        </label>
-                        <label class="setup-model" data-model="deepseek-reasoner">
-                            <input type="radio" name="setupModel" value="deepseek-reasoner">
-                            <div class="setup-model-body">
-                                <strong>DeepSeek-Reasoner</strong>
-                                <small>深度推理，对复杂需求分析更全面（速度较慢）</small>
-                            </div>
-                        </label>
-                        <label class="setup-model" data-model="claude-sonnet-4-20250514">
-                            <input type="radio" name="setupModel" value="claude-sonnet-4-20250514">
-                            <div class="setup-model-body">
-                                <strong>Claude Sonnet 4</strong>
-                                <small>均衡性能，适合大多数测试场景</small>
-                            </div>
-                        </label>
-                        <label class="setup-model" data-model="claude-opus-4-20250514">
-                            <input type="radio" name="setupModel" value="claude-opus-4-20250514">
-                            <div class="setup-model-body">
-                                <strong>Claude Opus 4</strong>
-                                <small>最强能力，适合高复杂度需求（需要 Anthropic Key）</small>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="setup-step">
-                <div class="setup-step-num">4</div>
-                <div class="setup-step-body">
-                    <h3>快速上手</h3>
-                    <p>配置完成！以下是几个快速开始的建议：</p>
-                    <ul class="setup-tips">
-                        <li><i class="bi bi-1-circle"></i> 在左侧「需求编辑」页面粘贴需求文档，点击「生成用例」</li>
-                        <li><i class="bi bi-2-circle"></i> 使用「AI 润色」按钮整理混乱的需求文档</li>
-                        <li><i class="bi bi-3-circle"></i> 生成的用例可编辑、筛选、批量导出为 Excel/CSV</li>
-                        <li><i class="bi bi-4-circle"></i> 点击「保存到用例库」存档，方便日后复用</li>
-                        <li><i class="bi bi-5-circle"></i> 使用「RTM 追溯」分析需求覆盖率</li>
-                    </ul>
-                    <div class="setup-actions">
-                        <button class="btn btn-accent" id="btnSetupDone"><i class="bi bi-check-lg me-1"></i> 开始使用</button>
-                        <button class="btn btn-ghost" id="btnSetupSkip">暂时跳过，我自己摸索</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<aside id="sidebar">
-    <div class="sidebar-brand">
-        <div class="sidebar-logo"><i class="bi bi-clipboard-check"></i></div>
-        <div class="sidebar-title">TestCase<span>AI</span></div>
-    </div>
-    <nav class="sidebar-nav">
-        <a class="nav-item active" data-page="home" title="主页 — API Key 状态、快捷入口、设置">
-            <i class="bi bi-house-door"></i>
-            <span>主页</span>
-        </a>
-        <a class="nav-item" data-page="input" title="输入需求文档、AI润色、选择导出字段">
-            <i class="bi bi-journal-text"></i>
-            <span>需求编辑</span>
-        </a>
-        <a class="nav-item" data-page="cases" title="生成、编辑、筛选测试用例">
-            <i class="bi bi-grid-3x3-gap"></i>
-            <span>用例管理</span>
-        </a>
-        <a class="nav-item" data-page="report" title="统计分析与报告导出">
-            <i class="bi bi-bar-chart"></i>
-            <span>测试报告</span>
-        </a>
-        <a class="nav-item" data-page="rtm" title="需求追溯矩阵，分析需求覆盖率">
-            <i class="bi bi-diagram-3"></i>
-            <span>RTM 追溯</span>
-        </a>
-
-        <div class="nav-section">工具</div>
-
-        <a class="nav-item" data-page="toolkit" title="编码转换、时间戳、密码/UUID生成">
-            <i class="bi bi-tools"></i>
-            <span>工具集</span>
-        </a>
-        <a class="nav-item" data-page="apitest" title="HTTP接口请求测试">
-            <i class="bi bi-hdd-rack"></i>
-            <span>API 测试</span>
-        </a>
-        <a class="nav-item" data-page="script" title="生成Playwright自动化脚本">
-            <i class="bi bi-file-code"></i>
-            <span>脚本生成</span>
-        </a>
-        <a class="nav-item" data-page="formatter" title="JSON/XML格式化、对比">
-            <i class="bi bi-json"></i>
-            <span>JSON / XML</span>
-        </a>
-        <a class="nav-item" data-page="regex" title="正则表达式匹配测试">
-            <i class="bi bi-asterisk"></i>
-            <span>正则测试</span>
-        </a>
-        <a class="nav-item" data-page="sql" title="SQL查询与数据分析">
-            <i class="bi bi-database"></i>
-            <span>SQL 查询</span>
-        </a>
-        <a class="nav-item" data-page="env" title="多环境配置管理">
-            <i class="bi bi-gear-wide-connected"></i>
-            <span>环境配置</span>
-        </a>
-        <a class="nav-item" data-page="bugreport" title="生成Jira/GitHub/Markdown格式Bug报告">
-            <i class="bi bi-bug"></i>
-            <span>Bug 导出</span>
-        </a>
-        <a class="nav-item" data-page="export" title="导出到Excel或CSV">
-            <i class="bi bi-box-arrow-down"></i>
-            <span>数据导出</span>
-        </a>
-        <a class="nav-item" data-page="editor" title="在线文本/表格/文档编辑器">
-            <i class="bi bi-file-earmark-code"></i>
-            <span>编辑器</span>
-        </a>
-    </nav>
-    <button class="sidebar-collapse-btn" id="btnCollapseSidebar" title="收起侧边栏">
-        <i class="bi bi-chevron-left"></i>
-    </button>
-    <div class="sidebar-footer">
-        <div class="sidebar-user-avatar" id="sidebarUserAvatar"><i class="bi bi-person-circle"></i></div>
-        <div class="sidebar-user-info" id="sidebarUserInfo">
-            <small id="sidebarUserName">未登录</small>
-        </div>
-        <button class="sidebar-auth-btn" id="btnAuth" title="登录/注册"><i class="bi bi-box-arrow-in-right"></i></button>
-        <button class="sidebar-auth-btn" id="btnLogout" title="退出登录" style="display:none;"><i class="bi bi-box-arrow-right"></i></button>
-        <button class="sidebar-auth-btn" id="btnSetupGuide" title="配置引导" style="display:none;"><i class="bi bi-question-circle"></i></button>
-        <button class="sidebar-auth-btn" id="btnNotifications" title="消息" style="display:none; position:relative;">
-            <i class="bi bi-bell"></i>
-            <span id="notifBadge" class="notif-badge" style="display:none;">0</span>
-        </button>
-        <button class="sidebar-auth-btn" id="btnContacts" title="联系人" style="display:none;"><i class="bi bi-people"></i></button>
-        <button class="theme-toggle" id="btnThemeToggle" title="切换明暗主题"><i class="bi bi-moon-stars"></i></button>
-    </div>
-</aside>
+{% extends "core/base.html" %}
+{% block title %}TestCaseAI - 智能测试用例生成器{% endblock %}
+{% block content %}
 
 <main id="mainContent">
+
+    <!-- Global error alert (visible from any page) -->
+    <div id="errorArea" class="alert alert-danger" role="alert" style="display:none; position:sticky; top:0; z-index:50;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span id="errorMessage"></span>
+        <button class="btn btn-sm btn-outline-danger ms-auto" id="btnRetry">重试</button>
+        <button class="btn-close ms-2" id="btnDismissError"></button>
+    </div>
 
     <!-- ==================== PAGE: 主页 ==================== -->
     <section class="content-page active" id="page-home">
@@ -426,14 +156,6 @@
         </div>
     </section>
 
-    <!-- Global error alert (visible from any page) -->
-    <div id="errorArea" class="alert alert-danger" role="alert" style="display:none; position:sticky; top:0; z-index:50;">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <span id="errorMessage"></span>
-        <button class="btn btn-sm btn-outline-danger ms-auto" id="btnRetry">重试</button>
-        <button class="btn-close ms-2" id="btnDismissError"></button>
-    </div>
-
     <!-- ==================== PAGE: 需求编辑 ==================== -->
     <section class="content-page" id="page-input">
         <div class="page-hero">
@@ -565,12 +287,27 @@
             </div>
         </div>
 
-        <div id="loadingArea" class="loading-block" style="display:none;">
-            <div class="spinner"></div>
-            <p id="loadingMessage">正在分析需求文档...</p>
-            <div class="loading-footer">
+        <div id="loadingArea" class="skeleton-loading-area" style="display:none;">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>
+                <strong id="loadingMessage" style="font-size:0.9rem;">正在分析需求文档...</strong>
+                <div class="ms-auto">
+                    <button class="btn btn-sm btn-outline-danger" id="btnCancelGenerate"><i class="bi bi-x-circle me-1"></i>取消</button>
+                </div>
+            </div>
+            <!-- Skeleton table -->
+            <div style="display:flex;gap:16px;margin-bottom:12px;">
+                <div class="skeleton skeleton-text-sm" style="width:80px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:60px;"></div>
+                <div class="skeleton skeleton-text-sm" style="width:100px;"></div>
+            </div>
+            <div class="skeleton skeleton-table-row" style="width:100%;"></div>
+            <div class="skeleton skeleton-table-row" style="width:95%;"></div>
+            <div class="skeleton skeleton-table-row" style="width:98%;"></div>
+            <div class="skeleton skeleton-table-row" style="width:85%;"></div>
+            <div class="skeleton skeleton-table-row" style="width:90%;"></div>
+            <div class="d-flex justify-content-center mt-3">
                 <small id="loadingElapsed" class="text-muted">已等待 0s</small>
-                <button class="btn btn-sm btn-outline-danger" id="btnCancelGenerate"><i class="bi bi-x-circle me-1"></i>取消</button>
             </div>
         </div>
 
@@ -638,9 +375,12 @@
                         <button class="batch-menu-item" data-action="append"><i class="bi bi-plus-circle me-1"></i> 追加内容</button>
                         <button class="batch-menu-item" data-action="replace"><i class="bi bi-arrow-repeat me-1"></i> 查找替换</button>
                         <button class="batch-menu-item" data-action="fill"><i class="bi bi-123 me-1"></i> 填充序号</button>
+                        <button class="batch-menu-item" data-action="clear"><i class="bi bi-eraser me-1"></i> 清除字段</button>
                     </div>
                 </div>
                 <span class="batch-divider"></span>
+                <button class="batch-menu-btn" id="btnBatchSaveLib"><i class="bi bi-folder-plus"></i> 保存到库</button>
+                <button class="batch-menu-btn" id="btnBatchDuplicate"><i class="bi bi-copy"></i> 复制</button>
                 <button class="batch-menu-btn" id="btnBatchExport"><i class="bi bi-download"></i> 导出选中</button>
                 <button class="batch-menu-btn" id="btnBatchDelete"><i class="bi bi-trash3"></i> 删除</button>
                 <button class="btn-ghost-white" id="btnBatchClear"><i class="bi bi-x-lg"></i> 取消</button>
@@ -688,7 +428,6 @@
         </div>
     </section>
 
-
     <!-- ==================== PAGE: 测试报告 ==================== -->
     <section class="content-page" id="page-report">
         <div class="page-hero">
@@ -697,9 +436,9 @@
                 <button class="btn btn-ghost" id="btnExportReport"><i class="bi bi-download"></i> 导出 HTML 报告</button>
             </div>
         </div>
-        <div class="report-empty" id="reportEmpty">
-            <i class="bi bi-bar-chart" style="font-size:2rem;"></i>
-            <p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p>
+        <div class="empty-state empty-state-lg" id="reportEmpty">
+            <i class="bi bi-bar-chart empty-state-icon" style="font-size:2rem;"></i>
+            <p class="empty-state-desc mt-2">暂无用例数据，请先生成测试用例。</p>
         </div>
         <div id="reportContent" style="display:none;">
             <div class="report-grid">
@@ -734,7 +473,6 @@
         </div>
     </section>
 
-
     <!-- ==================== PAGE: JSON / XML 工具 ==================== -->
     <section class="content-page" id="page-formatter">
         <div class="page-hero">
@@ -750,7 +488,6 @@
             </div>
         </div>
 
-        <!-- JSON tab -->
         <div class="fm-panel active" id="fmPanelJson">
             <div class="fm-input-row">
                 <div class="fm-input-group">
@@ -770,7 +507,6 @@
             </div>
         </div>
 
-        <!-- XML tab -->
         <div class="fm-panel" id="fmPanelXml">
             <div class="fm-input-row">
                 <div class="fm-input-group">
@@ -789,7 +525,6 @@
             </div>
         </div>
 
-        <!-- Diff tab -->
         <div class="fm-panel" id="fmPanelDiff">
             <div class="fm-input-row">
                 <div class="fm-input-group">
@@ -809,13 +544,11 @@
         </div>
     </section>
 
-
     <!-- ==================== PAGE: 在线编辑器 ==================== -->
     <section class="content-page" id="page-editor">
         <div class="page-hero">
             <h2>在线编辑器 <small>打开和编辑 TXT / Excel / Word 文件</small></h2>
         </div>
-
         <div class="editor-toolbar">
             <button class="btn btn-accent btn-sm" id="btnEditorOpen"><i class="bi bi-folder-open"></i> <span class="btn-text">打开文件</span></button>
             <button class="btn btn-outline btn-sm" id="btnEditorNew"><i class="bi bi-plus-lg"></i> <span class="btn-text">新建</span></button>
@@ -832,7 +565,7 @@
             </div>
         </div>
         <input type="file" id="fileInput" multiple accept=".txt,.xlsx,.xls,.docx" style="display:none">
-        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv,.json" style="display:none">
     </section>
 
     <!-- ==================== PAGE: 正则测试器 ==================== -->
@@ -950,38 +683,6 @@
             <i class="bi bi-exclamation-triangle-fill me-1"></i>
             <span id="sqlErrorMessage"></span>
         </div>
-
-        <!-- CSV Import Modal -->
-        <div class="modal fade" id="csvImportModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-upload me-2"></i>导入 CSV 数据</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">表名 <span class="text-danger">*</span></label>
-                            <input type="text" id="csvTableName" class="form-control" placeholder="如：students, orders_2024" value="my_data">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">选择 CSV 文件</label>
-                            <input type="file" id="csvFileInput" class="form-control" accept=".csv,.txt">
-                            <div class="form-text">第一行作为列名，支持 .csv / .txt 文件</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">或直接粘贴 CSV 内容</label>
-                            <textarea id="csvTextInput" class="form-control" rows="6" placeholder="name,age,score&#10;张三,28,95&#10;李四,32,88&#10;王五,24,92"></textarea>
-                        </div>
-                        <div id="csvImportStatus" class="small" style="display:none;"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                        <button type="button" class="btn btn-primary" id="btnCsvImport"><i class="bi bi-upload"></i> 导入</button>
-                    </div>
-                </div>
-            </div>
-        </div>
     </section>
 
     <!-- ==================== PAGE: 环境配置管理 ==================== -->
@@ -992,9 +693,9 @@
                 <button class="btn btn-accent btn-sm" id="btnEnvAdd"><i class="bi bi-plus-lg"></i> 新建环境</button>
             </div>
         </div>
-        <div id="envEmpty" class="env-empty">
-            <i class="bi bi-cloud-slash" style="font-size:2.5rem;"></i>
-            <p class="mt-2">暂无环境配置</p>
+        <div id="envEmpty" class="empty-state empty-state-sm">
+            <i class="bi bi-cloud-slash empty-state-icon"></i>
+            <p class="empty-state-desc">暂无环境配置</p>
         </div>
         <div id="envList" style="display:none;"></div>
     </section>
@@ -1009,8 +710,6 @@
                 <button class="btn btn-ghost btn-sm" id="btnBugRefresh"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
             </div>
         </div>
-
-        <!-- Toolbar -->
         <div class="toolbar">
             <div class="toolbar-left">
                 <div class="search-box">
@@ -1046,12 +745,10 @@
                 </div>
             </div>
         </div>
-
-        <!-- Bug list -->
         <div id="bugListArea">
-            <div class="bug-empty" id="bugEmpty">
-                <i class="bi bi-bug" style="font-size:2.5rem;"></i>
-                <p class="mt-2 mb-0">暂无 Bug，点击「新建 Bug」开始</p>
+            <div class="empty-state empty-state-sm" id="bugEmpty">
+                <i class="bi bi-bug empty-state-icon"></i>
+                <p class="empty-state-desc">暂无 Bug，点击「新建 Bug」开始</p>
             </div>
             <div id="bugTableWrap" class="bug-table-wrap" style="display:none;">
                 <table class="bug-table" id="bugTable">
@@ -1070,8 +767,6 @@
                 </table>
             </div>
         </div>
-
-        <!-- Preview / Export section -->
         <div class="bug-export-section" id="bugExportSection" style="display:none;">
             <div class="bug-export-header">
                 <span><i class="bi bi-eye"></i> 导出预览 — <strong id="bugExportCount">0</strong> 条</span>
@@ -1090,14 +785,11 @@
         <div class="page-hero">
             <h2>工具集 <small>编码转换 / 时间戳 / 密码生成</small></h2>
         </div>
-
         <div class="toolkit-tabs">
             <button class="toolkit-tab active" data-ktab="encoding"><i class="bi bi-arrows-expand"></i> 编码转换</button>
             <button class="toolkit-tab" data-ktab="timestamp"><i class="bi bi-clock"></i> 时间戳</button>
             <button class="toolkit-tab" data-ktab="generator"><i class="bi bi-key"></i> 密码/UUID</button>
         </div>
-
-        <!-- Encoding -->
         <div class="toolkit-panel active" id="ktab-encoding">
             <div class="encoding-toolbar">
                 <div class="encoding-type-group">
@@ -1126,8 +818,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Timestamp -->
         <div class="toolkit-panel" id="ktab-timestamp">
             <div class="ts-layout">
                 <div class="ts-card">
@@ -1164,8 +854,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Password / UUID -->
         <div class="toolkit-panel" id="ktab-generator">
             <div class="gen-tabs">
                 <button class="btn btn-ghost btn-sm gen-tab active" data-chtab="password">密码生成</button>
@@ -1202,7 +890,7 @@
                         <span class="gen-label">生成的密码</span>
                         <span class="gen-count" id="genPwCount">0 个</span>
                     </div>
-                    <div id="genPwList" class="gen-list"><div class="gen-empty">点击「生成密码」开始</div></div>
+                    <div id="genPwList" class="gen-list"><div class="empty-state gen-empty">点击「生成密码」开始</div></div>
                 </div>
             </div>
             <div class="gen-tab-content" id="genUuid">
@@ -1230,7 +918,7 @@
                         <span class="gen-label">生成的 UUID</span>
                         <span class="gen-count" id="genUuidCountLabel">0 个</span>
                     </div>
-                    <div id="genUuidList" class="gen-list"><div class="gen-empty">点击「生成 UUID」开始</div></div>
+                    <div id="genUuidList" class="gen-list"><div class="empty-state gen-empty">点击「生成 UUID」开始</div></div>
                 </div>
             </div>
         </div>
@@ -1253,7 +941,7 @@
             <div class="rtm-stat-card rate"><span class="rtm-stat-num" id="rtmRate">0%</span><span class="rtm-stat-label">覆盖率</span></div>
         </div>
         <div id="rtmLoading" class="rtm-loading" style="display:none;"><div class="spinner-border spinner-border-sm me-2"></div>正在分析...</div>
-        <div id="rtmNoCases" class="report-empty"><i class="bi bi-inbox"></i><p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p></div>
+        <div id="rtmNoCases" class="empty-state empty-state-lg"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">暂无用例数据，请先生成测试用例。</p></div>
         <div id="rtmContent" style="display:none;">
             <div class="rtm-filters">
                 <select id="rtmFilterStatus" class="form-select form-select-sm" style="width:auto;">
@@ -1389,466 +1077,121 @@
                 <button class="btn btn-accent btn-sm" id="btnScriptGenerate"><i class="bi bi-file-code"></i> 生成脚本</button>
             </div>
         </div>
-        <div id="scriptNoCases" class="report-empty"><i class="bi bi-inbox"></i><p class="mt-2 mb-0">暂无用例数据，请先生成测试用例。</p></div>
+        <div id="scriptNoCases" class="empty-state empty-state-lg"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">暂无用例数据，请先生成测试用例。</p></div>
         <div id="scriptContent" style="display:none;">
             <div id="scriptList"></div>
             <div class="sc-usage" id="scriptUsage" style="display:none;"></div>
         </div>
     </section>
 
+    <!-- ==================== PAGE: 生成历史 ==================== -->
+    <section class="content-page" id="page-history">
+        <div class="page-hero">
+            <h2>生成历史 <small>查看和恢复历史生成记录</small></h2>
+            <div class="page-hero-actions">
+                <button class="btn btn-ghost btn-sm" id="btnHistoryRefresh"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+            </div>
+        </div>
+        <div id="historyList"></div>
+        <div class="empty-state empty-state-lg" id="historyEmpty">
+            <i class="bi bi-clock-history empty-state-icon"></i>
+            <p class="empty-state-desc">暂无历史记录</p>
+            <div class="empty-state-action">
+                <button class="btn btn-accent btn-sm" data-page="input"><i class="bi bi-journal-text"></i> 去生成用例</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAGE: 操作中心 ==================== -->
+    <section class="content-page" id="page-operations">
+        <div class="page-hero">
+            <h2>操作中心 <small>通知、联系人、共享库管理</small></h2>
+        </div>
+
+        <div class="ops-tabs">
+            <button class="ops-tab active" data-ops-tab="notifications">
+                <i class="bi bi-bell"></i> 通知
+                <span id="opsNotifTabBadge" class="ops-tab-badge" style="display:none;">0</span>
+            </button>
+            <button class="ops-tab" data-ops-tab="contacts"><i class="bi bi-people"></i> 联系人</button>
+            <button class="ops-tab" data-ops-tab="outgoing"><i class="bi bi-share"></i> 我共享的</button>
+            <button class="ops-tab" data-ops-tab="shared"><i class="bi bi-inbox"></i> 共享库</button>
+        </div>
+
+        <div class="ops-panel active" id="ops-panel-notifications">
+            <div class="ops-panel-header">
+                <span class="text-muted small" id="opsNotifCount"></span>
+            </div>
+            <div id="opsNotifList"></div>
+        </div>
+
+        <div class="ops-panel" id="ops-panel-contacts">
+            <div class="ops-contact-toolbar">
+                <div class="input-group mb-3">
+                    <input type="text" id="opsContactSearch" class="form-control" placeholder="搜索用户名添加联系人">
+                    <button class="btn btn-primary" id="opsBtnAddContact">添加</button>
+                </div>
+            </div>
+            <div id="opsContactList"></div>
+        </div>
+
+        <div class="ops-panel" id="ops-panel-outgoing">
+            <div class="ops-panel-header">
+                <span class="text-muted small" id="opsOutgoingCount"></span>
+            </div>
+            <div id="opsOutgoingList">
+                <div class="text-center text-muted py-4"><i class="bi bi-share" style="font-size:2rem;"></i><p class="mt-2 mb-0">暂无共享记录</p></div>
+            </div>
+        </div>
+
+        <div class="ops-panel" id="ops-panel-shared">
+            <div id="opsSharedList">
+                <div class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:2rem;"></i><p class="mt-2 mb-0">暂无共享记录</p></div>
+            </div>
+        </div>
+    </section>
+
 </main>
 
-<!-- Environment Edit Modal -->
-<div class="modal fade" id="envModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+<!-- ==================== SHARE TO CONTACT MODAL ==================== -->
+<div class="modal fade" id="shareToContactModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-gear-wide-connected me-2"></i><span id="envModalTitle">编辑环境</span></h5>
+                <h5 class="modal-title">共享用例集给 <span id="shareToContactName" class="text-primary"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">环境名称</label>
-                        <input type="text" id="envFormName" class="form-control" placeholder="如: dev, staging, prod">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">基础 URL</label>
-                        <input type="url" id="envFormBaseUrl" class="form-control" placeholder="http://localhost:8080">
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">自定义请求头</label>
-                    <div id="envFormHeaders"></div>
-                    <button class="btn btn-ghost btn-sm mt-1" id="btnEnvAddHeader"><i class="bi bi-plus-lg"></i> 添加请求头</button>
-                </div>
-                <div>
-                    <label class="form-label">测试账号</label>
-                    <div id="envFormAccounts"></div>
-                    <button class="btn btn-ghost btn-sm mt-1" id="btnEnvAddAccount"><i class="bi bi-plus-lg"></i> 添加账号</button>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" id="btnEnvSave">保存</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Detail Modal -->
-<div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">编辑测试用例</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailModalBody"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" id="btnSaveDetail">保存</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Custom Confirm / Alert / Prompt Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold" id="confirmModalTitle">确认</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center px-4" id="confirmModalBody">
-        <p id="confirmModalMessage"></p>
-        <div id="confirmModalInputWrap" style="display:none;">
-          <input type="text" id="confirmModalInput" class="form-control mt-3" placeholder="">
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0 justify-content-center gap-2" id="confirmModalFooter">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmModalCancel">取消</button>
-        <button type="button" class="btn btn-primary" id="confirmModalOk">确定</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Keyboard Shortcuts Modal -->
-<div class="modal fade" id="shortcutsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold"><i class="bi bi-keyboard me-2"></i>快捷键</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body px-4">
-                <table class="shortcuts-table">
-                    <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>生成测试用例</td></tr>
-                    <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>保存到用例库</td></tr>
-                    <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>撤销</td></tr>
-                    <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Shift</kbd>+<kbd>Z</kbd></td><td>重做</td></tr>
-                    <tr><td><kbd>Delete</kbd></td><td>删除选中用例</td></tr>
-                    <tr><td><kbd>/</kbd></td><td>聚焦搜索框</td></tr>
-                    <tr><td><kbd>?</kbd></td><td>显示此面板</td></tr>
-                </table>
-            </div>
-            <div class="modal-footer border-0 pt-0 justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">知道了</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== AUTH MODAL (Login / Register) ==================== -->
-<div class="modal fade" id="authModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="authModalTitle">登录</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body px-4">
-                <ul class="auth-tabs-nav">
-                    <li class="auth-tabs-item"><span class="auth-tabs-link active" data-amode="login">登录</span></li>
-                    <li class="auth-tabs-item"><span class="auth-tabs-link" data-amode="register">注册</span></li>
-                </ul>
-                <div id="authFormLogin">
-                    <div class="mb-3">
-                        <label class="form-label">用户名</label>
-                        <input type="text" id="authLoginUsername" class="form-control" placeholder="输入用户名" autocomplete="username">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">密码</label>
-                        <input type="password" id="authLoginPassword" class="form-control" placeholder="输入密码" autocomplete="current-password">
-                    </div>
-                    <div class="auth-error" id="authLoginError" style="display:none;"></div>
-                    <button class="btn btn-primary w-100" id="btnAuthLogin"><i class="bi bi-box-arrow-in-right me-1"></i> 登录</button>
-                </div>
-                <div id="authFormRegister" style="display:none;">
-                    <div class="mb-3">
-                        <label class="form-label">用户名</label>
-                        <input type="text" id="authRegUsername" class="form-control" placeholder="至少3个字符" autocomplete="username">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">密码</label>
-                        <input type="password" id="authRegPassword" class="form-control" placeholder="至少6个字符" autocomplete="new-password">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">确认密码</label>
-                        <input type="password" id="authRegConfirm" class="form-control" placeholder="再次输入密码">
-                    </div>
-                    <div class="auth-error" id="authRegError" style="display:none;"></div>
-                    <button class="btn btn-success w-100" id="btnAuthRegister"><i class="bi bi-person-plus me-1"></i> 注册</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==================== LIBRARY MODAL ==================== -->
-<div class="modal fade" id="libraryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-collection me-2"></i>用例库</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0" id="libraryModalBody">
-                <div class="library-layout">
-                    <div class="library-tree-pane" id="libraryTreePane">
-                        <div class="library-tree-toolbar">
-                            <span class="tree-pane-title">文件夹</span>
-                            <button class="btn btn-ghost btn-sm" id="btnNewFolder" title="新建文件夹"><i class="bi bi-folder-plus"></i></button>
-                            <button class="btn btn-ghost btn-sm" id="btnRefreshLibTree" title="刷新"><i class="bi bi-arrow-clockwise"></i></button>
+                <p class="text-muted small mb-2">选择文件夹，然后选择要共享的用例集：</p>
+                <div class="row g-2">
+                    <div class="col-4">
+                        <div class="border rounded p-1" style="max-height:280px;overflow-y:auto;">
+                            <div id="shareFolderList" class="share-folder-list"></div>
+                            <div id="shareFolderLoading" class="text-center text-muted py-3 small">加载中...</div>
                         </div>
-                        <div class="library-tree" id="libraryTree"></div>
                     </div>
-                    <div class="library-content-pane" id="libraryContentPane">
-                        <div class="text-center text-muted py-4">
-                            <div class="spinner mb-2"></div>
-                            <p>加载中...</p>
+                    <div class="col-8">
+                        <div class="border rounded p-1" style="max-height:280px;overflow-y:auto;">
+                            <div class="share-folder-path small text-muted mb-1" id="shareFolderPath">请选择一个文件夹</div>
+                            <div id="shareSetList" class="share-set-list"></div>
+                            <div id="shareSetLoading" class="text-center text-muted py-3 small" style="display:none;">加载中...</div>
+                            <div id="shareSetEmpty" class="text-center text-muted py-3 small" style="display:none;">该文件夹下没有用例集</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Bug Edit Modal -->
-<div class="modal fade" id="bugEditModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bugEditModalTitle"><i class="bi bi-bug me-2"></i>编辑 Bug</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label">标题 <span class="text-danger">*</span></label>
-                        <input type="text" id="bugFormTitle" class="form-control" placeholder="输入 Bug 标题">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">严重程度</label>
-                        <select id="bugFormSeverity" class="form-select">
-                            <option value="P0">P0 - 阻断</option>
-                            <option value="P1">P1 - 严重</option>
-                            <option value="P2" selected>P2 - 一般</option>
-                            <option value="P3">P3 - 轻微</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">状态</label>
-                        <select id="bugFormStatus" class="form-select">
-                            <option value="open">Open</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="closed">Closed</option>
-                            <option value="reopened">Reopened</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">模块</label>
-                        <input type="text" id="bugFormModule" class="form-control" placeholder="所属模块">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">描述</label>
-                        <textarea id="bugFormDescription" class="form-control" rows="3" placeholder="Bug 详细描述..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">前置条件 / 测试数据</label>
-                        <textarea id="bugFormPreconditions" class="form-control" rows="3" placeholder="前置条件..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">测试步骤</label>
-                        <textarea id="bugFormSteps" class="form-control" rows="3" placeholder="重现步骤..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">预期结果</label>
-                        <textarea id="bugFormExpected" class="form-control" rows="3" placeholder="预期结果..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">实际结果</label>
-                        <textarea id="bugFormActual" class="form-control" rows="3" placeholder="实际结果..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">标签</label>
-                        <input type="text" id="bugFormTags" class="form-control" placeholder="逗号分隔，如：regression,ui">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">关联用例 ID</label>
-                        <input type="text" id="bugFormCaseId" class="form-control" placeholder="如：TC-001">
-                    </div>
-                </div>
-            </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" id="btnBugSave"><i class="bi bi-check-lg"></i> 保存</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" id="btnShareToContact" disabled><i class="bi bi-send"></i> 发送共享请求</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Dependency Search Modal -->
-<div class="modal fade" id="dependencyModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-link-45deg me-2"></i>查找前置用例</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <ul class="dep-tabs-nav" id="depTabs">
-          <li class="dep-tabs-item"><span class="dep-tabs-link active" data-tab="current">当前用例</span></li>
-          <li class="dep-tabs-item"><span class="dep-tabs-link" data-tab="library">用例库</span></li>
-        </ul>
-        <div class="dep-tab-content" id="depTabCurrent">
-          <input type="text" id="depSearchInput" class="form-control" placeholder="搜索用例标题 / 编号 / 模块...">
-          <div id="depSearchResults" class="mt-3"></div>
-        </div>
-        <div class="dep-tab-content" id="depTabLibrary" style="display:none;">
-          <div class="dep-lib-layout">
-            <div class="dep-lib-tree">
-              <div class="dep-lib-tree-label">文件夹</div>
-              <div id="depLibFolderTree"></div>
-            </div>
-            <div class="dep-lib-cases">
-              <div id="depLibBreadcrumb" class="dep-breadcrumb mb-2"></div>
-              <div id="depLibResults"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Save to library folder-picker modal -->
-<div class="modal fade" id="saveToLibModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">保存到用例库</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <label class="form-label">集合名称</label>
-        <input type="text" id="saveToLibName" class="form-control mb-3" placeholder="测试用例集名称">
-        <label class="form-label">目标文件夹</label>
-        <select id="saveToLibFolder" class="form-select">
-          <option value="">根目录（未分类）</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-        <button type="button" class="btn btn-primary" id="btnSaveToLibConfirm">保存</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Move set to folder modal -->
-<div class="modal fade" id="moveSetModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">移动到文件夹</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <label class="form-label">目标文件夹</label>
-        <select id="moveSetFolder" class="form-select">
-          <option value="">根目录（未分类）</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-        <button type="button" class="btn btn-primary" id="btnMoveSetConfirm">移动</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Test Data Generator Modal -->
-<div class="modal fade" id="dataGenModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-dice me-2"></i>测试数据生成器</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">数据类型</label>
-            <select id="dataGenType" class="form-select">
-              <option value="mobile">手机号</option>
-              <option value="email">邮箱地址</option>
-              <option value="name">中文姓名</option>
-              <option value="idcard">身份证号</option>
-              <option value="bankcard">银行卡号</option>
-              <option value="ip">IP 地址</option>
-              <option value="url">URL 链接</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">生成数量</label>
-            <input type="number" id="dataGenCount" class="form-control" value="10" min="1" max="500">
-          </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-primary w-100" id="btnDataGenGo"><i class="bi bi-lightning"></i> 生成</button>
-          </div>
-          <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-ghost w-100" id="btnDataGenCopy" title="复制全部"><i class="bi bi-copy"></i> 复制</button>
-          </div>
-        </div>
-        <div class="mt-3">
-          <label class="form-label">生成结果 <small class="text-muted" id="dataGenCountLabel"></small></label>
-          <textarea id="dataGenResult" class="form-control" rows="12" readonly style="font-family: 'SF Mono', monospace; font-size: 0.82rem; background: var(--color-bg);"></textarea>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Load from library confirmation modal -->
-<div class="modal fade" id="loadFromLibModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
-    <div class="modal-content load-from-lib-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title w-100 text-center fw-bold" id="loadFromLibModalTitle"></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center px-4" id="loadFromLibModalBody">
-      </div>
-      <div class="modal-footer border-0 pt-0 justify-content-center gap-2" id="loadFromLibModalFooter">
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Notifications Modal -->
-<div class="modal fade" id="notificationsModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold"><i class="bi bi-bell me-2"></i>消息</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body px-4" id="notificationsList" style="min-height:100px;">
-        <div class="text-center text-muted py-4">加载中...</div>
-      </div>
-      <div class="modal-footer border-0 pt-0 justify-content-center">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Contacts Modal -->
-<div class="modal fade" id="contactsModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold"><i class="bi bi-people me-2"></i>联系人</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body px-4">
-        <div class="input-group mb-3">
-          <input type="text" id="contactSearchInput" class="form-control" placeholder="搜索用户名添加联系人">
-          <button class="btn btn-primary" id="btnAddContact">添加</button>
-        </div>
-        <div id="contactsList" style="min-height:60px;">
-          <div class="text-center text-muted py-3">暂无联系人</div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0 justify-content-center">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js"></script>
-<script src="/static/js/app.js?v=52"></script>
-<script src="/static/js/modules/bugs.js?v=2"></script>
+{% endblock %}
+{% block extra_js %}
+<script src="/static/js/app.js?v=56"></script>
+<script src="/static/js/modules/bugs.js?v=3"></script>
 <script src="/static/js/modules/json-tools.js"></script>
 <script src="/static/js/modules/toolkit.js?v=2"></script>
 <script src="/static/js/modules/regex.js?v=2"></script>
@@ -1858,8 +1201,8 @@
 <script src="/static/js/modules/rtm.js?v=2"></script>
 <script src="/static/js/modules/apitest.js?v=2"></script>
 <script src="/static/js/modules/scriptgen.js?v=2"></script>
-<script src="/static/js/modules/auth.js?v=3"></script>
+<script src="/static/js/modules/history.js?v=1"></script>
+<script src="/static/js/modules/operations.js?v=5"></script>
 <script src="/static/js/modules/shortcuts.js?v=2"></script>
 <script src="/static/js/editor.js?v=3"></script>
-</body>
-</html>
+{% endblock %}

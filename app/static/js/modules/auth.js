@@ -294,6 +294,7 @@ async function checkAuth() {
     const saved = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!saved) {
         updateAuthUI();
+        if (typeof window.refreshHomePage === "function") window.refreshHomePage();
         showLoginOverlay();
         return;
     }
@@ -307,6 +308,7 @@ async function checkAuth() {
                 hideLoginOverlay();
                 await loadUserSettings();
                 window.navigateTo("home");
+                if (typeof window.refreshHomePage === "function") window.refreshHomePage();
             } else {
                 showLoginOverlay();
             }

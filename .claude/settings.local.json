@@ -131,7 +131,31 @@
       "Bash(taskkill //F //PID 1496)",
       "Bash(taskkill /f /pid 39124)",
       "Bash(taskkill /f /pid 33888)",
-      "Bash(echo \"started with PID $!\")"
+      "Bash(echo \"started with PID $!\")",
+      "Bash(awk '/^ \\\\/\\\\/ ---- Library/,/^ \\\\/\\\\/ ---- Notifications/' app/static/js/app.js)",
+      "Bash(awk '/\\\\/\\\\/ ---- Library/,/\\\\/\\\\/ ---- Notifications/' app/static/js/app.js)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(pkill -f \"uvicorn\")",
+      "Bash(pkill -f \"run.py\")",
+      "Bash(taskkill /F /PID 15308)",
+      "Bash(taskkill /F /PID 3656)",
+      "Bash(taskkill /F /PID 34664)",
+      "Bash(echo \"---exit: $?\")",
+      "Bash(findstr python *)",
+      "Bash(findstr ':8000 ')",
+      "Bash(findstr LISTENING)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(tasklist /FI \"PID eq 15308\" /FI \"PID eq 3656\" /FI \"PID eq 34664\")",
+      "Bash(tasklist /FI 'PID eq __TRACKED_VAR__' /NH)",
+      "Bash(taskkill /F /PID 22156)",
+      "Bash(powershell.exe -Command \"Get-Process -Id 15308,3656,22156,34664 -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell.exe *)",
+      "Bash(fuser 8000/tcp)",
+      "Bash(fuser -k 8000/tcp)",
+      "Bash(grep *)",
+      "Bash(/usr/bin/taskkill -f -im python.exe)",
+      "Bash(/usr/bin/taskkill -f -im python3.exe)"
     ]
   }
 }
