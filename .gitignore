@@ -9,3 +9,5 @@ dist/
 build/
 .DS_Store
 Thumbs.db
+node_modules/
+app/static/dist/

@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 from pathlib import Path
@@ -26,7 +27,31 @@ def _get_app_dir() -> Path:
 
 
 _APP_DIR = _get_app_dir()
+_DIST_DIR = _APP_DIR / "static" / "dist"
+_MANIFEST_PATH = _DIST_DIR / "manifest.json"
+
+def get_bundle_url() -> str:
+    """Resolve the hashed bundle filename from Vite's manifest.json."""
+    if _MANIFEST_PATH.exists():
+        try:
+            with open(_MANIFEST_PATH) as f:
+                manifest = json.load(f)
+            for value in manifest.values():
+                if value.get("isEntry"):
+                    return "/static/dist/" + value["file"]
+        except Exception:
+            pass
+    # Fallback: glob for main-*.js
+    try:
+        files = sorted(_DIST_DIR.glob("main-*.js"))
+        if files:
+            return "/static/dist/" + files[-1].name
+    except Exception:
+        pass
+    return "/static/dist/main.js"
+
 templates = Jinja2Templates(directory=str(_APP_DIR / "templates"))
+templates.env.globals["get_bundle_url"] = get_bundle_url
 
 app.mount("/static", StaticFiles(directory=str(_APP_DIR / "static")), name="static")
 
@@ -79,10 +104,10 @@ async def tool_bugs(request: Request):
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str = ""):
-    from app.services.auth import validate_session
+    from app.services.auth import get_user_by_token
     from app.services.websocket_manager import manager
 
-    user = validate_session(token)
+    user = get_user_by_token(token)
     if not user:
         await websocket.close(code=4001)
         return
@@ -128,6 +153,8 @@ from app.routes.bugs import router as bugs_router
 from app.routes.query import router as query_router
 from app.routes.misc import router as misc_router
 from app.routes.history import router as history_router
+from app.routes.admin import router as admin_router
+from app.routes.regression import router as regression_router
 
 app.include_router(auth_router)
 app.include_router(gen_router)
@@ -136,3 +163,5 @@ app.include_router(bugs_router)
 app.include_router(query_router)
 app.include_router(misc_router)
 app.include_router(history_router)
+app.include_router(admin_router)
+app.include_router(regression_router)

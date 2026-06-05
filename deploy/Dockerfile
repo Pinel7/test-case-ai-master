@@ -1,27 +1,36 @@
+# Stage 1: Frontend build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY vite.config.js ./
+COPY app/static/js/ ./app/static/js/
+RUN npm run build
+
+# Stage 2: Python runtime
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# No system dependencies needed — keep image minimal
+ENV TZ=Asia/Shanghai
+RUN apt-get update -qq && apt-get install -y -qq tzdata > /dev/null 2>&1 && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency file first for better caching
+ARG PIP_INDEX_URL=https://pypi.org/simple/
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
 COPY . .
+COPY --from=builder /app/app/static/dist/ ./app/static/dist/
 
-# Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
 
-# Railway provides PORT env var automatically; default to 8000
+COPY deploy/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
 
-CMD gunicorn app.main:app \
-    --workers 4 \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:${PORT:-8000} \
-    --timeout 120 \
-    --max-requests 1000 \
-    --max-requests-jitter 50
+ENTRYPOINT ["/entrypoint.sh"]

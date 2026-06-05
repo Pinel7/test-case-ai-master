@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: testcase-ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - testcase-data:/home/appuser/.TestCaseAI
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+
+volumes:
+  testcase-data:

@@ -1,0 +1,33 @@
+{
+  "name": "test-case-ai-master",
+  "version": "1.0.0",
+  "description": "基于 LLM 大语言模型的智能测试用例生成工具，支持从需求文档自动生成 19 字段结构化测试用例，提供在线编辑器、用例库管理、多格式导出、前置依赖关联等功能。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch --mode development",
+    "clean": "rm -rf app/static/dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pinel7/test-case-ai-master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Pinel7/test-case-ai-master/issues"
+  },
+  "homepage": "https://github.com/Pinel7/test-case-ai-master#readme",
+  "devDependencies": {
+    "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

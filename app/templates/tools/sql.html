@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% block title %}TestCaseAI - SQL 查询{% endblock %}
+{% block title %}TestForge - SQL 查询{% endblock %}
 {% block content %}
 
 <main id="mainContent">
@@ -50,13 +50,11 @@
 
 {% endblock %}
 {% block extra_js %}
-<script src="/static/js/modules/sql.js?v=2"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    // Initialize SQL tool on this standalone page
-    if (typeof initSqlTool === "function") {
+    if (typeof window.initSqlTool === "function") {
         setTimeout(() => {
-            initSqlTool();
+            window.initSqlTool();
             if (typeof window.initSqlCm === "function") window.initSqlCm();
             if (!window.schemaLoaded && typeof window.loadSqlSchema === "function") {
                 window.loadSqlSchema();

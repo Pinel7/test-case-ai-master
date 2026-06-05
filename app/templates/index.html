@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% block title %}TestCaseAI - 智能测试用例生成器{% endblock %}
+{% block title %}TestForge - 智能测试用例生成器{% endblock %}
 {% block content %}
 
 <main id="mainContent">
@@ -222,6 +222,10 @@
                 <div class="api-field">
                     <label>自定义模型 <small>（填写后覆盖上方模型选择）</small></label>
                     <input type="text" id="customModelInput" class="form-control form-control-sm" placeholder="例如：gpt-4o、自定义端点模型名">
+                </div>
+                <div class="api-field">
+                    <label>API 请求地址 <small>（留空则用官方默认地址）</small></label>
+                    <input type="text" id="apiBaseUrlInput" class="form-control form-control-sm" placeholder="例如：https://api.openai.com/v1">
                 </div>
             </div>
             <div class="api-settings-help">
@@ -1189,20 +1193,4 @@
 </div>
 
 {% endblock %}
-{% block extra_js %}
-<script src="/static/js/app.js?v=56"></script>
-<script src="/static/js/modules/bugs.js?v=3"></script>
-<script src="/static/js/modules/json-tools.js"></script>
-<script src="/static/js/modules/toolkit.js?v=2"></script>
-<script src="/static/js/modules/regex.js?v=2"></script>
-<script src="/static/js/modules/sql.js?v=2"></script>
-<script src="/static/js/modules/env.js?v=2"></script>
-<script src="/static/js/modules/report.js?v=2"></script>
-<script src="/static/js/modules/rtm.js?v=2"></script>
-<script src="/static/js/modules/apitest.js?v=2"></script>
-<script src="/static/js/modules/scriptgen.js?v=2"></script>
-<script src="/static/js/modules/history.js?v=1"></script>
-<script src="/static/js/modules/operations.js?v=5"></script>
-<script src="/static/js/modules/shortcuts.js?v=2"></script>
-<script src="/static/js/editor.js?v=3"></script>
-{% endblock %}
+{% block extra_js %}{% endblock %}

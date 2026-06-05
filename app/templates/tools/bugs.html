@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% block title %}TestCaseAI - Bug 管理{% endblock %}
+{% block title %}TestForge - Bug 管理{% endblock %}
 {% block content %}
 
 <main id="mainContent">
@@ -84,13 +84,12 @@
 
 {% endblock %}
 {% block extra_js %}
-<script src="/static/js/modules/bugs.js?v=2"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof initBugPage === "function") {
+    if (typeof window.initBugPage === "function") {
         setTimeout(() => {
-            initBugPage();
-            refreshBugList();
+            window.initBugPage();
+            window.refreshBugList();
         }, 100);
     }
 });
