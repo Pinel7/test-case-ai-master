@@ -25,7 +25,7 @@ def main():
         print("\nBuild failed!")
         sys.exit(1)
 
-    exe_path = PROJECT_DIR / "dist" / "TestCaseAI" / "TestCaseAI.exe"
+    exe_path = PROJECT_DIR / "dist" / "TestForge" / "TestForge.exe"
     print(f"\n=== Build successful! ===")
     print(f"Executable: {exe_path}")
 

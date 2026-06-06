@@ -1,5 +1,5 @@
 /**
- * Global initializer for TestCaseAI — shared across all pages (workspace & tools).
+ * Global initializer for TestForge — shared across all pages (workspace & tools).
  * Handles: sidebar, theme, auth UI enhancement, confirm/alert modals, notifications, contacts.
  * Loaded after shared.js and auth.js.
  */
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ====== WebSocket connection for real-time notifications ======
     let ws = null;
     function connectWebSocket() {
-        const token = localStorage.getItem("auth_token") || "";
+        const token = localStorage.getItem("itg_auth_token") || "";
         if (!token) return;
         const protocol = location.protocol === "https:" ? "wss:" : "ws:";
         const url = protocol + "//" + location.host + "/ws?token=" + encodeURIComponent(token);

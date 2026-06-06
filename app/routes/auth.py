@@ -9,13 +9,23 @@ from app.deps import logger, current_user
 router = APIRouter(tags=["auth"])
 
 
-@router.post("/api/auth/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, response: JSONResponse):
-    from app.services.auth import register_user, create_session
+@router.get("/api/auth/captcha")
+async def get_captcha():
+    from app.services.auth import generate_captcha
+    return generate_captcha()
 
+
+@router.post("/api/auth/register", response_model=AuthResponse)
+async def register(request: RegisterRequest, fastapi_req: Request, response: JSONResponse):
+    from app.services.auth import register_user, create_session, verify_captcha, log_action
+
+    client_ip = fastapi_req.client.host if fastapi_req.client else ""
+    if not verify_captcha(request.captcha_id, request.captcha_answer):
+        raise HTTPException(status_code=400, detail={"error_code": "captcha_error", "message": "验证码错误"})
     try:
-        user = register_user(request.username, request.password)
+        user = register_user(request.username, request.password, client_ip)
         token = create_session(user["id"])
+        log_action(user["id"], user["username"], "register", ip=client_ip)
         return AuthResponse(token=token, user=user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail={"error_code": "auth_error", "message": str(e)})
@@ -23,12 +33,13 @@ async def register(request: RegisterRequest, response: JSONResponse):
 
 @router.post("/api/auth/login", response_model=AuthResponse)
 async def login(request: LoginRequest):
-    from app.services.auth import authenticate_user, create_session
+    from app.services.auth import authenticate_user, create_session, log_action
 
     user = authenticate_user(request.username, request.password)
     if not user:
         raise HTTPException(status_code=401, detail={"error_code": "auth_error", "message": "用户名或密码错误"})
     token = create_session(user["id"])
+    log_action(user["id"], user["username"], "login")
     return AuthResponse(token=token, user=user)
 
 

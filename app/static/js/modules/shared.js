@@ -1,5 +1,5 @@
 /**
- * Shared utilities for TestCaseAI
+ * Shared utilities for TestForge
  * Loaded before app.js — all helpers are assigned to window for cross-module access.
  */
 
@@ -122,8 +122,8 @@ window.fetchWithRetry = fetchWithRetry;
 
 async function apiFetch(url, options = {}) {
     const resp = await fetch(url, {
-        headers: { "Content-Type": "application/json", ...options.headers },
         ...options,
+        headers: { "Content-Type": "application/json", ...options.headers },
     });
     if (!resp.ok) {
         let msg = "HTTP " + resp.status;

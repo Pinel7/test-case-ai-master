@@ -1,5 +1,5 @@
 /* ============================================================
-   TestCaseAI — Modern UI Stylesheet
+   TestForge — Modern UI Stylesheet
    ============================================================ */
 
 /* ----- Reset & Base ----- */
@@ -505,6 +505,12 @@ body {
     border-collapse: collapse;
     font-size: 0.82rem;
 }
+#testCaseTable th:first-child,
+#testCaseTable td:first-child { width: 32px; min-width: 32px; max-width: 32px; }
+#testCaseTable th:nth-child(2),
+#testCaseTable td:nth-child(2) { width: 40px; min-width: 40px; max-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#testCaseTable th:last-child,
+#testCaseTable td:last-child { width: 80px; min-width: 80px; max-width: 80px; }
 #testCaseTable thead {
     position: sticky; top: 0; z-index: 2;
     background: #f7f8fc;
@@ -545,7 +551,7 @@ body {
     box-shadow: 0 0 0 3px rgba(91,106,240,.1);
 }
 
-.table-wrap { max-height: 60vh; overflow: auto; }
+.table-wrap { max-height: 60vh; overflow-x: auto; overflow-y: auto; min-width: 0; }
 
 .btn-detail {
     padding: 3px 8px; font-size: 0.7rem;

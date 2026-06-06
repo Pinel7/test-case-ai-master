@@ -28,6 +28,7 @@ async def generate_stream(request: GenerationRequest):
                 model=request.model,
                 fields=request.fields,
                 case_count=request.case_count,
+                api_base_url=request.api_base_url,
             )
             yield "data: " + json.dumps({
                 "type": "complete",
@@ -56,12 +57,32 @@ async def generate(request: GenerationRequest):
             model=request.model,
             fields=request.fields,
             case_count=request.case_count,
+            api_base_url=request.api_base_url,
         )
         return GenerationResponse(test_cases=cases, warnings=warnings, usage=usage)
     except ValueError as e:
         raise HTTPException(status_code=400, detail={"error_code": "invalid_request", "message": str(e)})
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail={"error_code": "generation_failed", "message": str(e)})
+
+
+@router.post("/api/generate/outline")
+async def generate_outline(request: GenerationRequest):
+    """Generate a test outline (list of test ideas grouped by module)."""
+    from app.services.generator import generate_outline as outline_service
+
+    try:
+        outline, usage = await outline_service(
+            requirement_text=request.requirement_text,
+            api_key=request.api_key,
+            model=request.model,
+            api_base_url=request.api_base_url,
+        )
+        return {"outline": outline, "usage": usage}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error_code": "invalid_request", "message": str(e)})
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail={"error_code": "outline_failed", "message": str(e)})
 
 
 @router.post("/api/polish", response_model=PolishResponse)
@@ -73,6 +94,7 @@ async def polish(request: PolishRequest):
             requirement_text=request.requirement_text,
             model=request.model,
             api_key=request.api_key,
+            api_base_url=request.api_base_url,
         )
         return PolishResponse(polished_text=polished, usage=usage)
     except ValueError as e:
@@ -91,6 +113,7 @@ async def generate_rtm(request: RtmRequest):
             test_cases=request.test_cases,
             model=request.model,
             api_key=request.api_key,
+            api_base_url=request.api_base_url,
         )
         total = len(items)
         covered = sum(1 for i in items if i.get("coverage_status") == "covered")
@@ -123,6 +146,7 @@ async def generate_script(request: ScriptRequest):
             test_cases=request.test_cases,
             model=request.model,
             api_key=request.api_key,
+            api_base_url=request.api_base_url,
         )
         return ScriptResponse(scripts=scripts, usage=usage)
     except ValueError as e:

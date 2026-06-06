@@ -36,6 +36,7 @@ function initRtm() {
                     test_cases: testCases,
                     model: window.userModel || document.getElementById("modelSelect")?.value,
                     api_key: window.userApiKey || null,
+                    api_base_url: window.userApiBaseUrl || null,
                 }),
             });
             if (!resp.ok) { const err = await resp.json().catch(() => ({})); toast(err.detail?.message || "生成失败", "error"); return; }

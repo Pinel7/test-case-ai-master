@@ -1,5 +1,5 @@
 /* ==========================================================================
- * TestCaseAI — Main Application Module
+ * TestForge — Main Application Module
  *
  * Sections:
  *   1. DOM refs & state          ~line 2
@@ -17,18 +17,16 @@
  *   13. Batch operations         ~line 1467
  *   14. Import                   ~line 1756
  *   15. Templates                ~line 1986
- *   16. Export                   ~line 2097
- *   17. Persistence              ~line 2138
- *   18. Library (folder/set CRUD)~line 2185
- *   19. Filter                   ~line 3364
- *   20. Card view                ~line 3553
- *   21. Tag cloud                ~line 3641
+ *   16. Persistence              ~line 2097
+ *   17. Filter                   ~line 2535
+ *   18. Card view                ~line 2724
+ *   19. Tag cloud                ~line 2812
  * ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
     // ---- DOM refs ----
-    const requirementText = document.getElementById("requirementText");
-    const charCounter = document.getElementById("charCounter");
+        const requirementText = document.getElementById("requirementText");
+        const charCounter = document.getElementById("charCounter");
     const modelSelect = document.getElementById("modelSelect");
     const btnGenerate = document.getElementById("btnGenerate");
     const btnClear = document.getElementById("btnClear");
@@ -36,15 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPolish = document.getElementById("btnPolish");
     const btnPolishedUse = document.getElementById("btnPolishedUse");
     const btnCopyPolished = document.getElementById("btnCopyPolished");
-    const btnSelectAll = document.getElementById("btnSelectAll");
-    const btnDeselectAll = document.getElementById("btnDeselectAll");
     const btnRetry = document.getElementById("btnRetry");
     const btnDismissError = document.getElementById("btnDismissError");
     const btnAddRow = document.getElementById("btnAddRow");
     const btnDeleteSelected = document.getElementById("btnDeleteSelected");
     const btnDuplicate = document.getElementById("btnDuplicate");
-    const btnExportXLSX = document.getElementById("btnExportXLSX");
-    const btnExportCSV = document.getElementById("btnExportCSV");
     const btnSaveDetail = document.getElementById("btnSaveDetail");
     const btnImport = document.getElementById("btnImport");
     const btnTemplate = document.getElementById("btnTemplate");
@@ -67,12 +61,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const polishNewLen = document.getElementById("polishNewLen");
     const polishBadge = document.getElementById("polishBadge");
     const polishActions = document.getElementById("polishActions");
-    const exportFilename = document.getElementById("exportFilename");
-    const exportCaseCount = document.getElementById("exportCaseCount");
 
     const btnApiSettings = document.getElementById("btnApiSettings");
     const apiSettingsPanel = document.getElementById("apiSettingsPanel");
     const apiKeyInput = document.getElementById("apiKeyInput");
+    const apiBaseUrlInput = document.getElementById("apiBaseUrlInput");
     const customModelInput = document.getElementById("customModelInput");
     const btnToggleApiKey = document.getElementById("btnToggleApiKey");
     const tokenCounter = document.getElementById("tokenCounter");
@@ -89,6 +82,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // ---- State ----
     let testCases = [];
     let selectedFields = [...DEFAULT_TABLE_FIELDS];
+
+    function getActiveFields() {
+        return selectedFields.map(key => FIELD_BY_KEY[key]).filter(Boolean);
+    }
+
     let currentDetailIndex = -1;
     let polishedText = "";
     let originalTextForDiff = "";
@@ -98,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let undoMeta = []; // [{time, count}] parallel to undoStack
     let showingDiff = false;
     let userApiKey = "";
+    let userApiBaseUrl = "";
     let userModel = "";
     let sessionTokens = 0;
 
@@ -118,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
         testCases = JSON.parse(JSON.stringify(undoStack[undoPos]));
         saveToStorage();
         renderTable();
-        updateExportInfo();
+        window.updateExportInfo();
         updateBatchBar();
         toast("已撤销", "success");
     }
@@ -129,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
         testCases = JSON.parse(JSON.stringify(undoStack[undoPos]));
         saveToStorage();
         renderTable();
-        updateExportInfo();
+        window.updateExportInfo();
         updateBatchBar();
         toast("已恢复", "success");
     }
@@ -211,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     testCases = targetData;
                     saveToStorage();
                     rerender();
-                    updateExportInfo();
+                    window.updateExportInfo();
                     closeConfirmModal();
                     toast("已恢复历史版本", "success");
                 });
@@ -268,6 +267,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (savedApiKey) { userApiKey = savedApiKey; if (apiKeyInput) apiKeyInput.value = savedApiKey; }
             const savedUserModel = localStorage.getItem("itg_usermodel");
             if (savedUserModel) { userModel = savedUserModel; if (customModelInput) customModelInput.value = savedUserModel; }
+            const savedBaseUrl = localStorage.getItem("itg_apibaseurl");
+            if (savedBaseUrl) { userApiBaseUrl = savedBaseUrl; if (apiBaseUrlInput) apiBaseUrlInput.value = savedBaseUrl; }
             const savedTokens = localStorage.getItem("itg_tokens");
             if (savedTokens) { sessionTokens = parseInt(savedTokens) || 0; updateTokenCounter(); }
             // Session recovery check: if testCases is empty but recovery backup exists
@@ -287,17 +288,50 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         } catch (_) {}
-        if (undoStack.length === 0) pushUndo();
-        renderFieldChips();
-        updateExportInfo();
-        renderTemplates();
+        try {
+            if (undoStack.length === 0) pushUndo();
+            renderFieldChips();
+            window.updateExportInfo();
+            window.renderExportFields();
+            renderTemplates();
+        } catch (_) {}
     })();
 
     // Refresh home page after restoring localStorage values
     try { if (typeof window.refreshHomePage === "function") window.refreshHomePage(); } catch (_) {}
 
-    detailModal = new bootstrap.Modal(document.getElementById("detailModal"));
+    try { detailModal = new bootstrap.Modal(document.getElementById("detailModal")); } catch (_) { detailModal = null; }
     ensureDatalists();
+
+    // ---- Markdown Preview Toggle ----
+    (function() {
+        const _mdTextarea = document.getElementById("requirementText");
+        const _mdPreview = document.getElementById("mdPreview");
+        if (typeof marked !== "undefined") {
+            marked.setOptions({ breaks: true, gfm: true });
+        }
+        document.querySelectorAll(".input-tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".input-tab").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                const isPreview = tab.dataset.itab === "preview";
+                if (_mdTextarea) _mdTextarea.style.display = isPreview ? "none" : "";
+                if (_mdPreview) {
+                    _mdPreview.style.display = isPreview ? "" : "none";
+                    if (isPreview && typeof marked !== "undefined") {
+                        _mdPreview.innerHTML = marked.parse(_mdTextarea ? _mdTextarea.value : "");
+                    }
+                }
+            });
+        });
+        if (_mdTextarea) {
+            _mdTextarea.addEventListener("input", () => {
+                if (_mdPreview && _mdPreview.style.display !== "none" && typeof marked !== "undefined") {
+                    _mdPreview.innerHTML = marked.parse(_mdTextarea.value);
+                }
+            });
+        }
+    })();
 
     // ---- Sidebar navigation ----
     document.querySelectorAll(".nav-item").forEach(item => {
@@ -324,8 +358,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Enter next page — CSS animation fires automatically on .active
         nextPage.classList.add("active");
 
-        if (page === "export") updateExportInfo();
+        if (page === "export") { window.updateExportInfo(); window.renderExportFields(); }
         if (page === "home") refreshHomePage();
+        if (page === "cases" && testCases.length > 0) {
+            resultsArea.style.display = "";
+            renderTable();
+        }
     }
 
     // ---- API Settings ----
@@ -346,6 +384,12 @@ document.addEventListener("DOMContentLoaded", () => {
             userApiKey = apiKeyInput.value.trim();
             try { localStorage.setItem("itg_apikey", userApiKey); } catch (_) {}
             updateApiWarnDot();
+        });
+    }
+    if (apiBaseUrlInput) {
+        apiBaseUrlInput.addEventListener("input", () => {
+            userApiBaseUrl = apiBaseUrlInput.value.trim();
+            try { localStorage.setItem("itg_apibaseurl", userApiBaseUrl); } catch (_) {}
         });
     }
 
@@ -398,6 +442,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (requirementText.value) localStorage.setItem(STORAGE_REQ_KEY, requirementText.value);
 
+    // Input mode toggle
+    document.querySelectorAll(".input-mode-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".input-mode-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const mode = btn.dataset.mode;
+            const splitPanel = document.querySelector(".split-panel");
+            const structPanel = document.getElementById("structuredInputPanel");
+            if (mode === "free") {
+                if (splitPanel) splitPanel.style.display = "";
+                if (structPanel) structPanel.style.display = "none";
+            } else {
+                if (splitPanel) splitPanel.style.display = "none";
+                if (structPanel) structPanel.style.display = "";
+            }
+        });
+    });
+
     btnClear.addEventListener("click", async () => {
         if (testCases.length > 0) {
             const ok = await showConfirm("清空输入将丢弃当前测试用例，确定继续？");
@@ -414,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pushUndo();
         clearStorage();
         resetPolishPanel();
-        updateExportInfo();
+        window.updateExportInfo();
         hideResults();
     });
 
@@ -449,50 +511,64 @@ document.addEventListener("DOMContentLoaded", () => {
     btnPolishedUse.addEventListener("click", usePolished);
     btnCopyPolished.addEventListener("click", copyPolished);
 
-    btnSelectAll.addEventListener("click", () => setAllFieldChips(true));
-    btnDeselectAll.addEventListener("click", () => setAllFieldChips(false));
-
-    btnExportXLSX.addEventListener("click", () => doExport("xlsx"));
-    btnExportCSV.addEventListener("click", () => doExport("csv"));
-    document.getElementById("btnExportJSON")?.addEventListener("click", () => {
-        if (testCases.length === 0) { toast("没有可导出的用例", "warning"); return; }
-        const blob = new Blob([JSON.stringify(testCases, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "test_cases_backup_" + new Date().toISOString().slice(0, 10) + ".json";
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        toast("JSON 备份已下载", "success");
+    // Outline generation buttons
+    document.getElementById("btnGenerateOutline")?.addEventListener("click", callGenerateOutline);
+    document.getElementById("btnConfirmOutline")?.addEventListener("click", () => {
+        const panel = document.getElementById("outlinePanel");
+        if (panel) panel.style.display = "none";
+        const outlineText = buildOutlineText();
+        if (outlineText) {
+            requirementText.value = outlineText + "\n\n" + requirementText.value;
+            requirementText.dispatchEvent(new Event("input"));
+        }
+        // Switch to free-text mode so submitRequirement reads the combined text
+        const freeBtn = document.querySelector('.input-mode-btn[data-mode="free"]');
+        if (freeBtn) freeBtn.click();
+        submitRequirement();
     });
+    document.getElementById("btnDiscardOutline")?.addEventListener("click", () => {
+        const panel = document.getElementById("outlinePanel");
+        if (panel) panel.style.display = "none";
+        _outlineData = null;
+        const content = document.getElementById("outlineContent");
+        if (content) content.innerHTML = "";
+    });
+
+    document.getElementById("btnSelectAll")?.addEventListener("click", () => setAllFieldChips(true));
+    document.getElementById("btnDeselectAll")?.addEventListener("click", () => setAllFieldChips(false));
+
+    // Export button listeners are in modules/export.js (initExport)
+
+
     btnAddRow.addEventListener("click", addRow);
     btnDeleteSelected.addEventListener("click", () => deleteSelected());
     if (btnDuplicate) btnDuplicate.addEventListener("click", duplicateSelected);
     btnSaveDetail.addEventListener("click", saveDetail);
     document.getElementById("btnVersionHistory")?.addEventListener("click", showVersionHistory);
     filterInput.addEventListener("input", debouncedRerender);
-    if (btnImport) btnImport.addEventListener("click", () => { importToLibFolderId = null; importFileInput.click(); });
+    if (btnImport) btnImport.addEventListener("click", () => { window.setImportToLibFolderId(null); importFileInput.click(); });
     if (importFileInput) importFileInput.addEventListener("change", handleImport);
     if (btnTemplate) btnTemplate.addEventListener("click", toggleTemplateMenu);
     if (btnBatchClear) btnBatchClear.addEventListener("click", clearBatchSelection);
     document.getElementById("btnBatchExport")?.addEventListener("click", () => {
         const selected = getSelectedCases();
         if (selected.length === 0) { toast("请先选择用例", "warning"); return; }
-        doBatchExport(selected);
+        window.doBatchExport(selected);
     });
-    document.getElementById("btnBatchDelete")?.addEventListener("click", () => {
+    document.getElementById("btnBatchDelete")?.addEventListener("click", async () => {
         const selected = getSelectedCases();
         if (selected.length === 0) { toast("请先选择用例", "warning"); return; }
-        showConfirm(`确定删除选中的 ${selected.length} 条用例？`, () => {
-            pushUndo();
-            const indices = new Set(selected.map(tc => testCases.indexOf(tc)));
-            testCases = testCases.filter((_, i) => !indices.has(i));
-            testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
-            saveToStorage();
-            rerender();
-            updateExportInfo();
-            batchBar.classList.remove("active");
-            toast(`已删除 ${selected.length} 条`, "success");
-        });
+        const ok = await showConfirm(`确定删除选中的 ${selected.length} 条用例？`);
+        if (!ok) return;
+        pushUndo();
+        const indices = new Set(selected.map(tc => testCases.indexOf(tc)));
+        testCases = testCases.filter((_, i) => !indices.has(i));
+        testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
+        saveToStorage();
+        rerender();
+        window.updateExportInfo();
+        batchBar.classList.remove("active");
+        toast(`已删除 ${selected.length} 条`, "success");
     });
     // ---- Batch: Save selected to Library ----
     document.getElementById("btnBatchSaveLib")?.addEventListener("click", async () => {
@@ -548,37 +624,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
     buildBatchBar();
-    const btnSaveToLib = document.getElementById("btnSaveToLib");
-    const btnOpenLib = document.getElementById("btnOpenLib");
-    const btnNewFolder = document.getElementById("btnNewFolder");
-    const btnRefreshLibTree = document.getElementById("btnRefreshLibTree");
-    const btnSaveToLibConfirm = document.getElementById("btnSaveToLibConfirm");
-    let libraryModal = null;
-    try { libraryModal = new bootstrap.Modal(document.getElementById("libraryModal")); } catch (_) {}
-    // Reset folder selection when library modal is closed
-    if (libraryModal) {
-        document.getElementById("libraryModal").addEventListener("hidden.bs.modal", () => {
-            currentLibFolderId = null;
-        });
-    }
-    let saveToLibModal = null;
-    try { saveToLibModal = new bootstrap.Modal(document.getElementById("saveToLibModal")); } catch (_) {}
-    let moveSetModal = null;
-    try { moveSetModal = new bootstrap.Modal(document.getElementById("moveSetModal")); } catch (_) {}
-    let moveSetTargetId = null;
     let dependencyModal = null;
     try { dependencyModal = new bootstrap.Modal(document.getElementById("dependencyModal")); } catch (_) {}
-    let currentLibFolderId = null; // currently selected folder in library
-    if (btnSaveToLib) btnSaveToLib.addEventListener("click", showSaveToLibModal);
-    if (btnOpenLib) btnOpenLib.addEventListener("click", openLibrary);
-    if (btnNewFolder) btnNewFolder.addEventListener("click", () => createFolder(currentLibFolderId));
-    if (btnRefreshLibTree) btnRefreshLibTree.addEventListener("click", refreshLibraryTree);
-    if (btnSaveToLibConfirm) btnSaveToLibConfirm.addEventListener("click", doSaveToLibrary);
-    const btnMoveSetConfirm = document.getElementById("btnMoveSetConfirm");
-    if (btnMoveSetConfirm) btnMoveSetConfirm.addEventListener("click", doMoveSet);
-    // Import-to-folder handler
-    const btnImportToLib = document.getElementById("btnImportToLib");
-    if (btnImportToLib) btnImportToLib.addEventListener("click", () => importFileInput.click());
+    // Library button listeners are in modules/library.js (initLibrary)
 
     modelSelect.addEventListener("change", () => {
         localStorage.setItem("itg_model", modelSelect.value);
@@ -938,9 +986,99 @@ document.addEventListener("DOMContentLoaded", () => {
         if (_genElapsedTimer) { clearInterval(_genElapsedTimer); _genElapsedTimer = null; }
     }
 
+    // ---- Outline generation ----
+    let _outlineData = null;
+
+    function renderOutline(outline) {
+        const container = document.getElementById("outlineContent");
+        if (!container) return;
+        if (!outline || outline.length === 0) {
+            container.innerHTML = '<p class="text-muted">未生成测试要点，请重试。</p>';
+            return;
+        }
+        let html = "";
+        outline.forEach(section => {
+            html += '<div class="outline-section"><h4 class="outline-module"><i class="bi bi-box"></i> ' + escHtml(section.module || "未命名模块") + '</h4><ul>';
+            (section.test_ideas || []).forEach(idea => {
+                html += '<li>' + escHtml(idea) + '</li>';
+            });
+            html += '</ul></div>';
+        });
+        container.innerHTML = html;
+    }
+
+    function buildOutlineText() {
+        if (!_outlineData) return "";
+        return _outlineData.map(s =>
+            "### " + (s.module || "未命名模块") + "\n" + (s.test_ideas || []).map(t => "- " + t).join("\n")
+        ).join("\n\n");
+    }
+
+    async function callGenerateOutline() {
+        const inputMode = document.querySelector(".input-mode-btn.active")?.dataset?.mode || "free";
+        let text;
+        if (inputMode === "structured") {
+            text = buildStructuredRequirement();
+        } else {
+            text = requirementText.value.trim();
+        }
+        if (!text) { toast("请先输入需求", "warning"); return; }
+
+        const outlinePanel = document.getElementById("outlinePanel");
+        const outlineContent = document.getElementById("outlineContent");
+        if (outlinePanel) outlinePanel.style.display = "";
+        if (outlineContent) outlineContent.innerHTML = '<div class="text-center text-muted py-3"><div class="spinner mb-2"></div><p>正在生成测试要点...</p></div>';
+
+        try {
+            const data = await window.apiFetch("/api/generate/outline", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    requirement_text: text,
+                    model: document.getElementById("modelSelect")?.value || "deepseek-chat",
+                    api_key: window.userApiKey || undefined,
+                    api_base_url: window.userApiBaseUrl || undefined,
+                }),
+            });
+            _outlineData = data.outline || [];
+            if (data.usage) {
+                const u = data.usage;
+                addTokens(u.input_tokens, u.output_tokens);
+                const costStr = u.cost ? ` (≈$${u.cost.toFixed(4)})` : "";
+                toast(`测试要点生成完成，消耗 ${u.input_tokens.toLocaleString()} 输入 + ${u.output_tokens.toLocaleString()} 输出 tokens${costStr}`, "success");
+            }
+            renderOutline(_outlineData);
+        } catch (err) {
+            if (outlineContent) outlineContent.innerHTML = '<div class="admin-error">生成失败: ' + escHtml(err.message) + '</div>';
+            toast("生成测试要点失败: " + err.message, "error");
+        }
+    }
+
+    function buildStructuredRequirement() {
+        const parts = [];
+        const module = document.getElementById("siModule")?.value.trim();
+        const desc = document.getElementById("siDescription")?.value.trim();
+        const rules = document.getElementById("siInputRules")?.value.trim();
+        const expected = document.getElementById("siExpected")?.value.trim();
+        const edges = document.getElementById("siEdgeCases")?.value.trim();
+        if (module) parts.push("## 模块\n" + module);
+        if (desc) parts.push("## 功能描述\n" + desc);
+        if (rules) parts.push("## 输入字段与规则\n" + rules);
+        if (expected) parts.push("## 预期行为\n" + expected);
+        if (edges) parts.push("## 边界与异常场景\n" + edges);
+        return parts.join("\n\n");
+    }
+
     async function submitRequirement() {
-        const text = requirementText.value.trim();
-        if (!text) { showError("请先在「需求编辑」页面粘贴需求文档。"); return; }
+        const inputMode = document.querySelector(".input-mode-btn.active")?.dataset?.mode || "free";
+        let text;
+        if (inputMode === "structured") {
+            text = buildStructuredRequirement();
+            if (!text) { showError("请填写结构化输入字段"); return; }
+        } else {
+            text = requirementText.value.trim();
+            if (!text) { showError("请先在「需求编辑」页面粘贴需求文档。"); return; }
+        }
         if (text.length > 150000) { showError("文档过长（超过150,000字符）。"); return; }
 
         hideError();
@@ -987,6 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     requirement_text: text,
                     model: effectiveModel,
                     api_key: effectiveKey || undefined,
+                    api_base_url: userApiBaseUrl || undefined,
                     fields: selectedFields.length < ALL_FIELD_KEYS.length ? selectedFields : null,
                     case_count: caseCount,
                 }),
@@ -1023,14 +1162,15 @@ document.addEventListener("DOMContentLoaded", () => {
                                 pushUndo();
                                 renderTable();
                                 saveToStorage();
-                                updateExportInfo();
+                                window.updateExportInfo();
                                 hideLoading();
                                 stopElapsedTimer();
                                 resultsArea.style.display = "";
                                 if (evt.usage) {
                                     const u = evt.usage;
                                     addTokens(u.input_tokens, u.output_tokens);
-                                    toast(`消耗 ${u.input_tokens.toLocaleString()} 输入 + ${u.output_tokens.toLocaleString()} 输出 tokens（${u.model}）`, "success");
+                                    const costStr = u.cost ? ` (≈$${u.cost.toFixed(4)})` : "";
+                                    toast(`消耗 ${u.input_tokens.toLocaleString()} 输入 + ${u.output_tokens.toLocaleString()} 输出 tokens${costStr}（${u.model}）`, "success");
                                 }
                                 if (evt.warnings && evt.warnings.length > 0) {
                                     evt.warnings.forEach(w => toast(w, "warning"));
@@ -1046,6 +1186,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                                 requirement_text: historyText,
                                                 test_cases: testCases,
                                                 model: effectiveModel,
+                                                tokens_prompt: evt.usage?.input_tokens || 0,
+                                                tokens_completion: evt.usage?.output_tokens || 0,
+                                                cost: evt.usage?.cost || 0,
                                             }),
                                         }).catch(() => {});
                                     }
@@ -1174,7 +1317,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const resp = await fetchWithRetry("/api/polish", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ requirement_text: text, model: effectiveModel, api_key: effectiveKey || undefined }),
+                body: JSON.stringify({ requirement_text: text, model: effectiveModel, api_key: effectiveKey || undefined, api_base_url: userApiBaseUrl || undefined }),
             });
             if (!resp.ok) throw new Error((await resp.json()).detail?.message || "润色失败");
 
@@ -1246,15 +1389,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateSelectedCount() {
         const chips = document.querySelectorAll("#fieldChips .field-chip.selected");
-        if (selectedCount) selectedCount.textContent = chips.length;
-    }
-
-    function setAllFieldChips(select) {
-        document.querySelectorAll("#fieldChips .field-chip").forEach(chip => {
-            if (select) chip.classList.add("selected"); else chip.classList.remove("selected");
-        });
-        updateSelectedCount();
-        applyFieldsSelection();
+        if (document.getElementById("selectedCount")) document.getElementById("selectedCount").textContent = chips.length;
     }
 
     function applyFieldsSelection() {
@@ -1270,6 +1405,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (testCases.length > 0) renderTable();
     }
 
+    function setAllFieldChips(select) {
+        document.querySelectorAll("#fieldChips .field-chip").forEach(chip => {
+            if (select) chip.classList.add("selected"); else chip.classList.remove("selected");
+        });
+        updateSelectedCount();
+        applyFieldsSelection();
+    }
+
+    // ---- Field Presets (removed — using selectedFields) ----
     // ---- Render Table (defined below in new feature section) ----
 
     // ---- Detail Modal ----
@@ -1280,22 +1424,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let html = '<div class="row">';
         for (const f of FIELD_DEFS) {
-            const val = escHtml(String(tc[f.key] || ""));
+            const key = f.key;
+            const fieldType = f.type;
+            const fieldOptions = f.options || null;
+            const val = escHtml(String(tc[key] || ""));
             html += `<div class="col-md-6 mb-3"><label class="form-label">${f.label}</label>`;
-            if (f.type === "select") {
-                html += `<select class="form-select" data-detail-field="${f.key}">`;
-                for (const opt of (f.options || []))
-                    html += `<option value="${opt}" ${tc[f.key] === opt ? "selected" : ""}>${opt}</option>`;
+            if (fieldType === "select") {
+                html += `<select class="form-select" data-detail-field="${key}">`;
+                for (const opt of (fieldOptions || []))
+                    html += `<option value="${opt}" ${tc[key] === opt ? "selected" : ""}>${opt}</option>`;
                 html += `</select>`;
-            } else if (f.type === "combo") {
-                html += `<input type="text" class="form-control" data-detail-field="${f.key}" value="${val}" list="dl_${f.key}">`;
-            } else if (f.type === "textarea") {
-                html += `<textarea class="form-control" data-detail-field="${f.key}" rows="3">${val}</textarea>`;
-                if (f.key === "preconditions") {
+            } else if (fieldType === "combo") {
+                html += `<input type="text" class="form-control" data-detail-field="${key}" value="${val}" list="dl_${key}">`;
+            } else if (fieldType === "textarea") {
+                html += `<textarea class="form-control" data-detail-field="${key}" rows="3">${val}</textarea>`;
+                if (key === "preconditions") {
                     html += `<button class="btn btn-ghost btn-sm mt-1 btn-dep-find" data-dep-idx="${index}" type="button"><i class="bi bi-link-45deg"></i> 查找前置用例</button>`;
                 }
             } else {
-                html += `<input type="text" class="form-control" data-detail-field="${f.key}" value="${val}">`;
+                html += `<input type="text" class="form-control" data-detail-field="${key}" value="${val}">`;
             }
             html += `</div>`;
         }
@@ -1335,11 +1482,9 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < rows.length; i++) {
             const idx = parseInt(domRows[i]?.dataset.index);
             if (idx >= 0 && idx < testCases.length) {
-                for (const key of selectedFields) {
-                    if (rows[i][key] !== undefined && testCases[idx][key] !== rows[i][key]) {
+                for (const key of getActiveFields().map(f => f.key)) {
                         if (!changed) { pushUndo(); changed = true; }
                         testCases[idx][key] = rows[i][key];
-                    }
                 }
             }
         }
@@ -1365,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pushUndo();
         testCases.push(newTestCase(testCases.length));
         saveToStorage();
-        updateExportInfo();
+        window.updateExportInfo();
         renderTable();
         const lastInput = tableBody.querySelector("tr[data-index]:last-child input[data-field]");
         if (lastInput) lastInput.focus();
@@ -1384,7 +1529,7 @@ document.addEventListener("DOMContentLoaded", () => {
         for (const idx of indices) testCases.splice(idx, 1);
         testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
         saveToStorage();
-        updateExportInfo();
+        window.updateExportInfo();
         renderTable();
         updateBatchBar();
         toast(`已删除 ${indices.length} 条用例`, "success");
@@ -1406,7 +1551,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
         saveToStorage();
-        updateExportInfo();
+        window.updateExportInfo();
         renderTable();
         toast(`已复制 ${copies.length} 条用例`, "success");
     }
@@ -1431,30 +1576,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return [...new Set(indices)].sort((a, b) => a - b).map(i => testCases[i]);
     }
 
-    async function doBatchExport(selected) {
-        const btn = document.getElementById("btnBatchExport");
-        setBtnLoading(btn, true);
-        const filename = `selected_cases_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.xlsx`;
-        try {
-            const resp = await fetch("/api/export/xlsx", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ test_cases: selected, filename }),
-            });
-            if (!resp.ok) throw new Error("导出失败");
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast(`已导出 ${selected.length} 条用例`, "success");
-        } catch (err) {
-            toast(err.message, "error");
-        } finally {
-            setBtnLoading(btn, false);
-        }
-    }
+    // doBatchExport moved to modules/export.js
 
     function updateSelectAllState() {
         const cb = document.getElementById("selectAll");
@@ -1829,7 +1951,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function showImportModal(rows) {
         const headerRow = rows[0].map(h => String(h || "").trim());
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c || "").trim() !== ""));
-        const isLibraryImport = importToLibFolderId !== null;
+        const isLibraryImport = window.getImportToLibFolderId() !== null;
 
         let html = '<div class="row mb-3"><div class="col-12">';
         html += '<p class="mb-2">检测到 <strong>' + dataRows.length + '</strong> 行数据。请映射列：</p>';
@@ -1890,7 +2012,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("btnSaveDetail").style.display = "";
             document.querySelector("#detailModal .modal-title").textContent = "编辑测试用例";
             if (isLibraryImport) {
-                importToLibFolderId = null;
+                window.setImportToLibFolderId(null);
                 // Restore normal z-index
                 modalEl.style.zIndex = "";
             }
@@ -1920,8 +2042,8 @@ document.addEventListener("DOMContentLoaded", () => {
             imported.push(tc);
         }
 
-        const fid = importToLibFolderId;
-        importToLibFolderId = null;
+        const fid = window.getImportToLibFolderId();
+        window.setImportToLibFolderId(null);
         const name = "导入 " + new Date().toLocaleDateString("zh-CN") + " " + new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 
         const btn = document.getElementById("btnImportToLibNow");
@@ -1933,7 +2055,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ name: name, test_cases: imported, requirement_text: "", folder_id: fid }),
             });
             if (!resp.ok) throw new Error((await resp.json()).detail?.message || "保存失败");
-            importToLibFolderId = null;
+            window.setImportToLibFolderId(null);
             detailModal.hide();
             toast("已导入 " + imported.length + " 条用例到用例库", "success");
             loadLibraryContent(fid);
@@ -1976,7 +2098,7 @@ document.addEventListener("DOMContentLoaded", () => {
         testCases.forEach((tc, i) => { tc.case_id = `TC-${String(i + 1).padStart(3, "0")}`; });
 
         saveToStorage();
-        updateExportInfo();
+        window.updateExportInfo();
         resultsArea.style.display = "";
         renderTable();
         detailModal.hide();
@@ -2017,7 +2139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             testCases.push(tc);
         }
         saveToStorage();
-        updateExportInfo();
+        window.updateExportInfo();
         resultsArea.style.display = "";
         renderTable();
         navigateTo("cases");
@@ -2095,46 +2217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return tc;
     }
 
-    // ---- Export ----
-    function updateExportInfo() {
-        if (exportCaseCount) exportCaseCount.textContent = testCases.length;
-        if (exportFilename) {
-            const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-            exportFilename.value = `test_cases_${ts}`;
-        }
-    }
-
-    async function doExport(format) {
-        if (testCases.length === 0) { showError("没有可导出的测试用例。"); return; }
-
-        let filename = exportFilename.value.trim() || `test_cases_${Date.now()}`;
-        const ext = format === "xlsx" ? ".xlsx" : ".csv";
-        if (!filename.endsWith(ext)) filename += ext;
-
-        const exportBtn = format === "xlsx" ? btnExportXLSX : btnExportCSV;
-        setBtnLoading(exportBtn, true);
-
-        try {
-            const resp = await fetch(`/api/export/${format}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ test_cases: testCases, filename: filename }),
-            });
-            if (!resp.ok) throw new Error("导出失败");
-
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast("导出成功", "success");
-        } catch (err) {
-            showError(err.message || "导出失败。");
-        } finally {
-            setBtnLoading(exportBtn, false);
-        }
-    }
+    // Export functions moved to modules/export.js (updateExportInfo, renderExportFields, doExport, doBatchExport)
 
     // ---- Persistence ----
     let _autoSaveTimer = null;
@@ -2183,771 +2266,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
-    // ---- Library (server-side SQLite persistence with folder hierarchy) ----
-
-    // Save-to-lib modal
-    async function showSaveToLibModal() {
-        if (testCases.length === 0) { showError("没有可保存的用例。"); return; }
-        document.getElementById("saveToLibName").value = "测试用例集 " + new Date().toLocaleDateString("zh-CN");
-        // Populate folder dropdown
-        const sel = document.getElementById("saveToLibFolder");
-        sel.innerHTML = '<option value="">根目录（未分类）</option>';
-        try {
-            const resp = await fetch("/api/library/folders");
-            const data = await resp.json();
-            const folders = data.folders || [];
-            // Build indented options
-            const map = {};
-            folders.forEach(f => { map[f.id] = { ...f, children: [] }; });
-            const roots = [];
-            folders.forEach(f => {
-                if (f.parent_id && map[f.parent_id]) map[f.parent_id].children.push(map[f.id]);
-                else roots.push(map[f.id]);
-            });
-            function addOptions(nodes, depth) {
-                nodes.forEach(n => {
-                    const indent = "  ".repeat(depth);
-                    sel.innerHTML += `<option value="${n.id}">${indent}${escHtml(n.name)}</option>`;
-                    if (n.children.length) addOptions(n.children, depth + 1);
-                });
-            }
-            addOptions(roots, 0);
-        } catch (_) {}
-        if (saveToLibModal) saveToLibModal.show();
-    }
-
-    async function doSaveToLibrary() {
-        const name = document.getElementById("saveToLibName").value.trim();
-        if (!name) { showError("请输入名称"); return; }
-        const folderIdSel = document.getElementById("saveToLibFolder");
-        const folderId = folderIdSel.value ? parseInt(folderIdSel.value) : null;
-        const reqText = document.getElementById("requirementText")?.value || "";
-        const btn = document.getElementById("btnSaveToLibConfirm");
-        setBtnLoading(btn, true);
-        try {
-            const resp = await fetch("/api/library/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name, test_cases: testCases, requirement_text: reqText, folder_id: folderId }),
-            });
-            if (!resp.ok) throw new Error((await resp.json()).detail?.message || "保存失败");
-            if (saveToLibModal) saveToLibModal.hide();
-            toast("已保存到用例库", "success");
-        } catch (err) {
-            showError("保存到库失败：" + (err.message || err));
-        } finally {
-            setBtnLoading(btn, false);
-        }
-    }
-
-    function openLibrary() {
-        if (!libraryModal) return;
-        refreshLibraryTree();
-        loadLibraryContent(null);
-        libraryModal.show();
-    }
-
-    async function refreshLibraryTree() {
-        const btn = document.getElementById("btnRefreshLibTree");
-        if (btn) btn.disabled = true;
-        try {
-            const resp = await fetch("/api/library/folders");
-            const data = await resp.json();
-            renderLibraryTree(data.folders || [], currentLibFolderId);
-        } catch (_) {
-            document.getElementById("libraryTree").innerHTML = '<div class="text-muted small p-2">加载失败</div>';
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    }
-
-    function renderLibraryTree(folders, selectedId) {
-        const treeEl = document.getElementById("libraryTree");
-        if (!treeEl) return;
-
-        const map = {};
-        folders.forEach(f => { map[f.id] = { ...f, children: [] }; });
-        const roots = [];
-        folders.forEach(f => {
-            if (f.parent_id && map[f.parent_id]) map[f.parent_id].children.push(map[f.id]);
-            else roots.push(map[f.id]);
-        });
-
-        function renderNode(node, depth) {
-            const hasChildren = node.children.length > 0;
-            const isSelected = node.id === selectedId;
-            return `<li class="tree-list-item">
-                <div class="tree-item${isSelected ? " selected" : ""}" data-folder-id="${node.id}" style="padding-left:${4 + depth * 16}px;">
-                    <span class="tree-toggle${hasChildren ? "" : " tree-toggle-placeholder"}">
-                        ${hasChildren ? '<i class="bi bi-chevron-down"></i>' : ""}
-                    </span>
-                    <i class="bi bi-folder"></i>
-                    <span class="tree-label">${escHtml(node.name)}</span>
-                    <button class="tree-link" data-action="rename" data-fid="${node.id}" title="重命名"><i class="bi bi-pencil"></i></button>
-                    <button class="tree-link danger" data-action="delete" data-fid="${node.id}" title="删除"><i class="bi bi-trash"></i></button>
-                </div>
-                ${hasChildren ? `<ul class="tree-list">${node.children.map(c => renderNode(c, depth + 1)).join("")}</ul>` : ""}
-            </li>`;
-        }
-
-        let html = '<ul class="tree-list">';
-        // Root entry
-        html += `<li class="tree-list-item">
-            <div class="tree-item tree-item-root${selectedId === null ? " selected" : ""}" data-folder-id="">
-                <span class="tree-toggle tree-toggle-placeholder"></span>
-                <i class="bi bi-folder"></i>
-                <span class="tree-label">根目录</span>
-            </div>
-        </li>`;
-        roots.forEach(r => { html += renderNode(r, 1); });
-        html += '</ul>';
-        treeEl.innerHTML = html;
-
-        // Click: select folder
-        treeEl.querySelectorAll(".tree-item[data-folder-id]").forEach(item => {
-            item.addEventListener("click", function (e) {
-                if (e.target.closest(".tree-link")) return;
-                const fid = this.dataset.folderId;
-                const id = fid === "" ? null : (fid ? parseInt(fid) : null);
-                currentLibFolderId = id;
-                loadLibraryContent(id);
-                // Update selection
-                treeEl.querySelectorAll(".tree-item.selected").forEach(el => el.classList.remove("selected"));
-                this.classList.add("selected");
-            });
-        });
-        // Toggle collapse
-        treeEl.querySelectorAll(".tree-toggle:not(.tree-toggle-placeholder)").forEach(toggle => {
-            toggle.addEventListener("click", function (e) {
-                e.stopPropagation();
-                this.classList.toggle("collapsed");
-                const ul = this.closest(".tree-list-item").querySelector(":scope > .tree-list");
-                if (ul) ul.style.display = ul.style.display === "none" ? "" : "none";
-            });
-        });
-        // Rename
-        treeEl.querySelectorAll("[data-action='rename']").forEach(btn => {
-            btn.addEventListener("click", async function (e) {
-                e.stopPropagation();
-                const fid = parseInt(this.dataset.fid);
-                const treeItem = this.closest(".tree-item");
-                const label = treeItem.querySelector(".tree-label");
-                const oldName = label.textContent;
-                label.contentEditable = "true";
-                label.classList.add("editing");
-                label.focus();
-                const sel = window.getSelection();
-                sel.selectAllChildren(label);
-                sel.collapseToEnd();
-                async function finish() {
-                    label.contentEditable = "false";
-                    label.classList.remove("editing");
-                    const newName = label.textContent.trim();
-                    if (newName && newName !== oldName) {
-                        try {
-                            await fetch(`/api/library/folders/${fid}`, {
-                                method: "PUT",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ name: newName }),
-                            });
-                            toast("已重命名", "success");
-                        } catch (_) { label.textContent = oldName; }
-                    } else { label.textContent = oldName; }
-                }
-                label.addEventListener("blur", finish, { once: true });
-                label.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); finish(); } });
-            });
-        });
-        // Delete folder
-        treeEl.querySelectorAll("[data-action='delete']").forEach(btn => {
-            btn.addEventListener("click", async function (e) {
-                e.stopPropagation();
-                const fid = parseInt(this.dataset.fid);
-                const name = this.closest(".tree-item").querySelector(".tree-label").textContent;
-                if (!(await showConfirm(`确定删除文件夹「${name}」？<br>子文件夹将一并删除，集合将移至根目录。`))) return;
-                btn.disabled = true;
-                try {
-                    await fetch(`/api/library/folders/${fid}`, { method: "DELETE" });
-                    toast("已删除文件夹", "success");
-                    refreshLibraryTree();
-                    loadLibraryContent(currentLibFolderId);
-                } catch (_) {
-                    toast("删除失败", "warning");
-                    btn.disabled = false;
-                }
-            });
-        });
-    }
-
-    async function createFolder(parentId) {
-        const name = await showPrompt("请输入文件夹名称：", "", "新建文件夹");
-        if (!name || !name.trim()) return;
-        const btn = document.getElementById("btnNewFolder");
-        setBtnLoading(btn, true);
-        try {
-            await fetch("/api/library/folders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name.trim(), parent_id: parentId || null }),
-            });
-            toast("文件夹已创建", "success");
-            refreshLibraryTree();
-        } catch (_) {
-            toast("创建失败", "warning");
-        } finally {
-            setBtnLoading(btn, false);
-        }
-    }
-
-    // Move set between folders
-    async function showMoveModal(setId) {
-        moveSetTargetId = setId;
-        const sel = document.getElementById("moveSetFolder");
-        sel.innerHTML = '<option value="">根目录（未分类）</option>';
-        try {
-            const resp = await fetch("/api/library/folders");
-            const data = await resp.json();
-            const folders = data.folders || [];
-            const map = {}; folders.forEach(f => { map[f.id] = { ...f, children: [] }; });
-            const roots = []; folders.forEach(f => { if (f.parent_id && map[f.parent_id]) map[f.parent_id].children.push(map[f.id]); else roots.push(map[f.id]); });
-            function addOptions(nodes, depth) {
-                nodes.forEach(n => {
-                    sel.innerHTML += `<option value="${n.id}">${"  ".repeat(depth)}${escHtml(n.name)}</option>`;
-                    if (n.children.length) addOptions(n.children, depth + 1);
-                });
-            }
-            addOptions(roots, 0);
-        } catch (_) {}
-        if (moveSetModal) moveSetModal.show();
-    }
-
-    async function doMoveSet() {
-        // Batch mode: moveSetTargetId is null, use libSelectedSets
-        const ids = moveSetTargetId ? [moveSetTargetId] : Array.from(libSelectedSets);
-        if (ids.length === 0) return;
-        const sel = document.getElementById("moveSetFolder");
-        const folderId = sel.value ? parseInt(sel.value) : null;
-        const btn = document.getElementById("btnMoveSetConfirm");
-        setBtnLoading(btn, true);
-        let ok = 0;
-        for (const id of ids) {
-            try {
-                const resp = await fetch(`/api/library/${id}/move`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ folder_id: folderId }),
-                });
-                if (resp.ok) ok++;
-            } catch (_) {}
-        }
-        setBtnLoading(btn, false);
-        if (moveSetModal) moveSetModal.hide();
-        moveSetTargetId = null;
-        libSelectedSets.clear();
-        updateLibBatchUI();
-        toast(`已移动 ${ok} 个集合`, "success");
-        loadLibraryContent(currentLibFolderId);
-    }
-
-    // Update share modal to show contacts
-    showShareModal = function(setId) {
-        let contacts = [];
-        fetch("/api/contacts", { headers: getAuthHeaders() })
-            .then(r => r.ok ? r.json() : { contacts: [] })
-            .then(d => { contacts = d.contacts || []; showShareDialog(); })
-            .catch(() => showShareDialog());
-        function showShareDialog() {
-            let html = '<div class="text-start">';
-            html += '<p class="mb-2">选择联系人，或直接输入用户名：</p>';
-            if (contacts.length > 0) {
-                html += '<div class="mb-2 d-flex flex-wrap gap-1" id="shareContactList">';
-                for (const c of contacts) {
-                    html += '<span class="btn btn-sm btn-outline-primary contact-pick" data-username="' + escHtml(c.username) + '" style="cursor:pointer">' + escHtml(c.username) + '</span>';
-                }
-                html += '</div>';
-            }
-            html += '<div class="input-group"><span class="input-group-text"><i class="bi bi-person"></i></span>';
-            html += '<input type="text" id="shareUsernameInput" class="form-control" placeholder="输入用户名"></div>';
-            html += '</div>';
-
-            showCustomDialog("共享用例集", html, [
-                { text: "取消", cls: "btn-secondary", action: () => {} },
-                { text: "发送共享请求", cls: "btn-primary", action: doShare },
-            ]);
-            // Wire contact clicks
-            setTimeout(() => {
-                document.querySelectorAll("#shareContactList .contact-pick").forEach(el => {
-                    el.addEventListener("click", () => {
-                        const input = document.getElementById("shareUsernameInput");
-                        if (input) input.value = el.dataset.username;
-                    });
-                });
-            }, 50);
-        }
-        async function doShare() {
-            const input = document.getElementById("shareUsernameInput");
-            const name = input ? input.value.trim() : "";
-            if (!name) { toast("请输入或选择用户名", "warning"); return; }
-            try {
-                const resp = await fetch("/api/library/" + setId + "/share", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-                    body: JSON.stringify({ username: name }),
-                });
-                if (!resp.ok) {
-                    const err = await resp.json();
-                    const msg = typeof err.detail?.message === "string" ? err.detail.message
-                              : typeof err.detail === "string" ? err.detail
-                              : "共享失败";
-                    throw new Error(msg);
-                }
-                const data = await resp.json();
-                toast(data.message || "共享请求已发送", "success");
-                loadLibraryContent(currentLibFolderId);
-            } catch (err) {
-                toast("共享失败：" + (err.message || err), "danger");
-            }
-        }
-    };
-
-    // Create empty set in the current folder
-    async function createEmptySet(folderId) {
-        const name = await showPrompt("新建用例集名称：", "用例集 " + new Date().toLocaleDateString("zh-CN"), "新建用例集");
-        if (!name || !name.trim()) return;
-        const btn = document.getElementById("btnNewLibSet");
-        if (btn) btn.disabled = true;
-        try {
-            await fetch("/api/library/save", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name.trim(), test_cases: [], requirement_text: "", folder_id: folderId }),
-            });
-            toast("已创建空用例集", "success");
-            loadLibraryContent(folderId);
-        } catch (_) {
-            toast("创建失败", "warning");
-            if (btn) btn.disabled = false;
-        }
-    }
-
-    // Import file into the current library folder
-    let importToLibFolderId = null;
-    function importToFolder(folderId) {
-        importToLibFolderId = folderId;
-        importFileInput.click();
-    }
-
-    let libSelectedSets = new Set();
-
-    function updateLibBatchUI() {
-        const count = libSelectedSets.size;
-        const bar = document.getElementById("libBatchBar");
-        const cnt = document.getElementById("libBatchCount");
-        if (!bar) return;
-        if (count > 0) {
-            bar.style.display = "flex";
-            if (cnt) cnt.textContent = count;
-        } else {
-            bar.style.display = "none";
-        }
-    }
-
-    async function batchMoveSets() {
-        if (libSelectedSets.size === 0) return;
-        const sel = document.getElementById("moveSetFolder");
-        sel.innerHTML = '<option value="">根目录（未分类）</option>';
-        try {
-            const resp = await fetch("/api/library/folders");
-            const data = await resp.json();
-            const folders = data.folders || [];
-            const map = {}; folders.forEach(f => { map[f.id] = { ...f, children: [] }; });
-            const roots = []; folders.forEach(f => { if (f.parent_id && map[f.parent_id]) map[f.parent_id].children.push(map[f.id]); else roots.push(map[f.id]); });
-            function addOptions(nodes, depth) {
-                nodes.forEach(n => {
-                    sel.innerHTML += `<option value="${n.id}">${"  ".repeat(depth)}${escHtml(n.name)}</option>`;
-                    if (n.children.length) addOptions(n.children, depth + 1);
-                });
-            }
-            addOptions(roots, 0);
-        } catch (_) {}
-        moveSetTargetId = null; // null means batch mode
-        if (moveSetModal) moveSetModal.show();
-    }
-
-    async function batchDeleteSets() {
-        if (libSelectedSets.size === 0) return;
-        if (!(await showConfirm(`确定删除选中的 ${libSelectedSets.size} 个集合？此操作不可恢复。`))) return;
-        const btn = document.getElementById("btnLibBatchDelete");
-        if (btn) btn.disabled = true;
-        let ok = 0;
-        for (const id of libSelectedSets) {
-            try {
-                await fetch(`/api/library/${id}`, { method: "DELETE" });
-                ok++;
-            } catch (_) {}
-        }
-        libSelectedSets.clear();
-        updateLibBatchUI();
-        toast(`已删除 ${ok} 个集合`, "success");
-        loadLibraryContent(currentLibFolderId);
-    }
-
-    function toggleLibSelectAll(checked) {
-        const pane = document.getElementById("libraryContentPane");
-        if (!pane) return;
-        pane.querySelectorAll(".lib-checkbox").forEach(cb => {
-            cb.checked = checked;
-            const id = parseInt(cb.dataset.id);
-            if (checked) libSelectedSets.add(id);
-            else libSelectedSets.delete(id);
-        });
-        updateLibBatchUI();
-    }
-
-    function toggleLibItem(id, checked) {
-        if (checked) libSelectedSets.add(id);
-        else libSelectedSets.delete(id);
-        updateLibBatchUI();
-    }
-
-    // Pagination state for library
-    const LIB_PAGE_SIZE = 20;
-    let _libPageOffset = 0;
-
-    async function loadLibraryContent(folderId) {
-        const pane = document.getElementById("libraryContentPane");
-        if (!pane) return;
-        libSelectedSets.clear();
-        updateLibBatchUI();
-        pane.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner mb-2"></div><p>加载中...</p></div>';
-
-        const folderName = folderId ? "当前文件夹" : "根目录";
-        const sqEl = document.getElementById("libSearchInput");
-        const q = sqEl ? sqEl.value.trim() : "";
-        let toolbar = '<div class="lib-content-header">';
-        toolbar += '<i class="bi bi-folder2-open"></i>';
-        toolbar += '<span class="folder-name">' + escHtml(folderName) + '</span>';
-        toolbar += '<span class="folder-badge" id="libSetCount">-</span>';
-        toolbar += '<div class="ms-auto d-flex gap-2">';
-        toolbar += '<input type="search" class="form-control form-control-sm lib-search-input" id="libSearchInput" placeholder="搜索用例集..." value="' + escHtml(q) + '">';
-        toolbar += '<button class="btn btn-ghost btn-sm" id="btnNewLibSet"><i class="bi bi-plus-lg"></i> 新建用例集</button>';
-        toolbar += '<button class="btn btn-ghost btn-sm" id="btnImportToLib"><i class="bi bi-upload"></i> 导入</button>';
-        toolbar += '</div></div>';
-        // Batch bar
-        toolbar += '<div class="lib-batch-bar" id="libBatchBar" style="display:none;">';
-        toolbar += '<span class="lib-batch-count" id="libBatchCount">0</span> 项已选';
-        toolbar += '<button class="btn btn-ghost btn-sm ms-2" id="btnLibBatchMove"><i class="bi bi-arrow-right-square"></i> 批量移动</button>';
-        toolbar += '<button class="btn btn-ghost btn-sm text-danger" id="btnLibBatchDelete"><i class="bi bi-trash"></i> 批量删除</button>';
-        toolbar += '<button class="btn btn-ghost btn-sm" id="btnLibBatchClear">取消选择</button>';
-        toolbar += '</div>';
-
-        function navigateToFolder(fid, name) {
-            _libPageOffset = 0;
-            const treeEl = document.getElementById("libraryTree");
-            if (treeEl) {
-                treeEl.querySelectorAll(".tree-item.selected").forEach(el => el.classList.remove("selected"));
-                const target = treeEl.querySelector(`.tree-item[data-folder-id="${fid === null ? "" : fid}"]`);
-                if (target) target.classList.add("selected");
-            }
-            currentLibFolderId = fid;
-            loadLibraryContent(fid);
-        }
-
-        try {
-            let setsUrl = `/api/library/list`;
-            const params = [];
-            if (folderId !== null && folderId !== undefined) params.push(`folder_id=${folderId}`);
-            if (q) params.push(`q=${encodeURIComponent(q)}`);
-            params.push(`limit=${LIB_PAGE_SIZE}`, `offset=${_libPageOffset}`);
-            if (params.length) setsUrl += '?' + params.join('&');
-            const [setsResp, foldersResp] = await Promise.all([
-                fetch(setsUrl),
-                fetch("/api/library/folders")
-            ]);
-            if (!setsResp.ok) throw new Error("加载失败");
-            const setsData = await setsResp.json();
-            const allFolders = foldersResp.ok ? (await foldersResp.json()).folders || [] : [];
-            const sets = setsData.sets || [];
-
-            // Update shared sets badge on the library button
-            const sharedCount = sets.filter(s => s.shared_by && !s.owned).length;
-            const badge = document.getElementById("libSharedBadge");
-            if (badge) {
-                badge.textContent = sharedCount > 0 ? sharedCount : "";
-                badge.style.display = sharedCount > 0 ? "" : "none";
-            }
-
-            // Filter child folders: parent_id == folderId (or IS NULL for root)
-            const childFolders = allFolders.filter(f =>
-                folderId === null || folderId === undefined
-                    ? (f.parent_id === null || f.parent_id === undefined)
-                    : f.parent_id === folderId
-            );
-
-            let body = '';
-
-            // Child folders section
-            if (childFolders.length > 0) {
-                body += '<div class="lib-subfolders">';
-                childFolders.forEach(f => {
-                    body += `<div class="lib-subfolder" data-folder-id="${f.id}" data-folder-name="${escHtml(f.name)}">`;
-                    body += '<div class="lib-subfolder-icon"><i class="bi bi-folder"></i></div>';
-                    body += '<div class="lib-subfolder-name">' + escHtml(f.name) + '</div>';
-                    body += '<i class="bi bi-chevron-right lib-subfolder-arrow"></i>';
-                    body += '</div>';
-                });
-                body += '</div>';
-            }
-
-            // Sets section
-            if (sets.length === 0 && childFolders.length === 0) {
-                body += '<div class="empty-state empty-state-sm"><i class="bi bi-inbox empty-state-icon"></i><p class="empty-state-desc">此文件夹下无内容</p></div>';
-            } else if (sets.length > 0) {
-                body += '<div class="lib-list">';
-                body += '<div class="lib-list-header"><label class="lib-check-label"><input type="checkbox" id="libSelectAll"> 全选</label></div>';
-                sets.forEach(s => {
-                    const isShared = s.shared_by && !s.owned;
-                    body += '<div class="lib-item' + (isShared ? ' lib-item-shared' : '') + '" data-id="' + s.id + '">';
-                    body += '<label class="lib-check-wrap" onclick="event.stopPropagation()"><input type="checkbox" class="lib-checkbox" data-id="' + s.id + '"></label>';
-                    body += '<div class="lib-item-icon"><i class="bi ' + (isShared ? 'bi-share' : 'bi-file-earmark-text') + '"></i></div>';
-                    body += '<div class="lib-item-info"><strong>' + escHtml(s.name) + '</strong><small>' + (isShared ? escHtml('来自 ' + s.shared_by) : escHtml(s.updated_at || "")) + '</small></div>';
-                    body += '<span class="lib-item-badge">' + s.case_count + ' 条</span>';
-                    body += '<div class="lib-item-actions">';
-                    if (isShared) {
-                        body += '<button class="lib-load" data-id="' + s.id + '" title="加载"><i class="bi bi-box-arrow-down"></i></button>';
-                        body += '<button class="danger lib-delete" data-id="' + s.id + '" title="移除"><i class="bi bi-trash"></i></button>';
-                    } else {
-                        body += '<button class="lib-load" data-id="' + s.id + '" title="加载"><i class="bi bi-box-arrow-down"></i></button>';
-                        body += '<button class="lib-share" data-id="' + s.id + '" title="共享"><i class="bi bi-share"></i></button>';
-                        body += '<button class="lib-move" data-id="' + s.id + '" title="移动到..."><i class="bi bi-arrow-right-square"></i></button>';
-                        body += '<button class="danger lib-delete" data-id="' + s.id + '" title="删除"><i class="bi bi-trash"></i></button>';
-                    }
-                    body += '</div></div>';
-                });
-                body += '</div>';
-            }
-            pane.innerHTML = toolbar + body;
-
-            const total = setsData.total || 0;
-            // Pagination bar
-            if (total > LIB_PAGE_SIZE) {
-                const totalPages = Math.ceil(total / LIB_PAGE_SIZE);
-                const currentPage = Math.floor(_libPageOffset / LIB_PAGE_SIZE) + 1;
-                const paginationHtml = `
-                <div class="pagination-bar mt-2 d-flex align-items-center justify-content-between px-2 py-1">
-                    <small class="text-muted">共 ${total} 个集合</small>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-ghost btn-sm ${_libPageOffset <= 0 ? 'disabled' : ''}" id="btnLibPrevPage" ${_libPageOffset <= 0 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i> 上一页</button>
-                        <small class="text-muted">第 ${currentPage}/${totalPages} 页</small>
-                        <button class="btn btn-ghost btn-sm ${_libPageOffset + LIB_PAGE_SIZE >= total ? 'disabled' : ''}" id="btnLibNextPage" ${_libPageOffset + LIB_PAGE_SIZE >= total ? 'disabled' : ''}>下一页 <i class="bi bi-chevron-right"></i></button>
-                    </div>
-                </div>`;
-                pane.insertAdjacentHTML('beforeend', paginationHtml);
-                document.getElementById("btnLibPrevPage")?.addEventListener("click", () => {
-                    _libPageOffset = Math.max(0, _libPageOffset - LIB_PAGE_SIZE);
-                    loadLibraryContent(folderId);
-                });
-                document.getElementById("btnLibNextPage")?.addEventListener("click", () => {
-                    _libPageOffset += LIB_PAGE_SIZE;
-                    loadLibraryContent(folderId);
-                });
-            } else {
-                _libPageOffset = 0;
-            }
-
-            const setCount = sets.length;
-            const folderCount = childFolders.length;
-            const label = [];
-            if (folderCount > 0) label.push(folderCount + " 个子目录");
-            if (setCount > 0) label.push(setCount + " 个集合");
-            document.getElementById("libSetCount").textContent = label.length > 0 ? label.join("、") : "空";
-
-            // Sub-folder click → navigate
-            pane.querySelectorAll(".lib-subfolder").forEach(el => {
-                el.addEventListener("click", () => {
-                    const fid = parseInt(el.dataset.folderId);
-                    const fname = el.dataset.folderName;
-                    navigateToFolder(fid, fname);
-                });
-            });
-
-            // Batch bar buttons
-            const libBatchMove = document.getElementById("btnLibBatchMove");
-            const libBatchDelete = document.getElementById("btnLibBatchDelete");
-            const libBatchClear = document.getElementById("btnLibBatchClear");
-            if (libBatchMove) libBatchMove.addEventListener("click", batchMoveSets);
-            if (libBatchDelete) libBatchDelete.addEventListener("click", batchDeleteSets);
-            if (libBatchClear) libBatchClear.addEventListener("click", () => { libSelectedSets.clear(); pane.querySelectorAll(".lib-checkbox").forEach(cb => cb.checked = false); updateLibBatchUI(); });
-
-            // Toolbar buttons
-            const btnNewLibSet = document.getElementById("btnNewLibSet");
-            const btnImportToLib = document.getElementById("btnImportToLib");
-            if (btnNewLibSet) btnNewLibSet.addEventListener("click", () => createEmptySet(folderId));
-            if (btnImportToLib) btnImportToLib.addEventListener("click", () => importToFolder(folderId));
-
-            // Search input — debounced reload
-            const searchInput = document.getElementById("libSearchInput");
-            if (searchInput) {
-                let searchTimer;
-                searchInput.addEventListener("input", () => {
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(() => {
-                        _libPageOffset = 0;
-                        loadLibraryContent(folderId);
-                    }, 300);
-                });
-            }
-
-            // Select all
-            const selectAll = document.getElementById("libSelectAll");
-            if (selectAll) selectAll.addEventListener("change", () => toggleLibSelectAll(selectAll.checked));
-
-            // Checkboxes
-            pane.querySelectorAll(".lib-checkbox").forEach(cb => {
-                cb.addEventListener("change", () => toggleLibItem(parseInt(cb.dataset.id), cb.checked));
-            });
-
-            // Item clicks (excluding checkbox and buttons)
-            pane.querySelectorAll(".lib-item").forEach(item => {
-                item.addEventListener("click", e => {
-                    if (e.target.closest("button") || e.target.closest("input") || e.target.closest("label")) return;
-                    loadFromLibrary(parseInt(item.dataset.id));
-                });
-            });
-            pane.querySelectorAll(".lib-load").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); loadFromLibrary(parseInt(btn.dataset.id), btn); });
-            });
-            pane.querySelectorAll(".lib-share").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); showShareModal(parseInt(btn.dataset.id)); });
-            });
-            pane.querySelectorAll(".lib-move").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); showMoveModal(parseInt(btn.dataset.id)); });
-            });
-            pane.querySelectorAll(".lib-delete").forEach(btn => {
-                btn.addEventListener("click", e => { e.stopPropagation(); deleteFromLibrary(parseInt(btn.dataset.id), btn); });
-            });
-        } catch (err) {
-            pane.innerHTML = toolbar + '<div class="empty-state empty-state-sm"><i class="bi bi-exclamation-triangle empty-state-icon"></i><p class="empty-state-desc">加载失败：' + escHtml(err.message || err) + '</p></div>';
-        }
-    }
-
-    async function loadFromLibrary(id, btn) {
-        if (btn) btn.disabled = true;
-        try {
-            const resp = await fetch("/api/library/" + id);
-            if (!resp.ok) throw new Error((await resp.json()).detail?.message || "加载失败");
-            const data = await resp.json();
-            const cases = data.test_cases || [];
-
-            if (cases.length === 0) { toast("该集合内无用例", "warning"); if (btn) btn.disabled = false; return; }
-            if (btn) btn.disabled = false;
-
-            if (testCases.length === 0) {
-                // No current cases — load directly
-                applyLibraryLoad(cases, data);
-                return;
-            }
-
-            // Has current cases — show choice modal
-            const loadModal = new bootstrap.Modal(document.getElementById("loadFromLibModal"));
-            const modalBody = document.getElementById("loadFromLibModalBody");
-            const modalFooter = document.getElementById("loadFromLibModalFooter");
-            const modalTitle = document.getElementById("loadFromLibModalTitle");
-
-            function showChoice() {
-                modalTitle.textContent = "从用例库加载";
-                modalBody.innerHTML = '<div class="load-lib-icon"><i class="bi bi-box-arrow-down"></i></div>'
-                    + '<div class="load-lib-set-name">' + escHtml(data.name) + '</div>'
-                    + '<div class="load-lib-meta">该集合包含 <strong>' + cases.length + '</strong> 条用例</div>'
-                    + '<div class="load-lib-warning"><i class="bi bi-exclamation-circle me-1"></i>当前已有 <strong>' + testCases.length + '</strong> 条未保存用例，请选择加载方式</div>';
-                modalFooter.innerHTML = '<button type="button" class="btn btn-load-cancel" data-bs-dismiss="modal">取消</button>'
-                    + '<button type="button" class="btn btn-load-append" id="btnLoadAppend"><i class="bi bi-plus-circle"></i> 追加到末尾</button>'
-                    + '<button type="button" class="btn btn-load-replace" id="btnLoadReplace"><i class="bi bi-arrow-repeat"></i> 覆盖现有</button>';
-
-                document.getElementById("btnLoadReplace").addEventListener("click", () => showConfirm("replace"));
-                document.getElementById("btnLoadAppend").addEventListener("click", () => showConfirm("append"));
-            }
-
-            function showConfirm(mode) {
-                if (mode === "replace") {
-                    modalTitle.textContent = "确认覆盖";
-                    modalBody.innerHTML = '<div class="load-lib-icon warning"><i class="bi bi-exclamation-triangle"></i></div>'
-                        + '<div class="load-lib-confirm-text">将<strong>丢弃</strong>当前全部 <strong>' + testCases.length + '</strong> 条用例，<br>替换为库中「' + escHtml(data.name) + '」的 <strong>' + cases.length + '</strong> 条用例。</div>'
-                        + '<div class="load-lib-confirm-hint">此操作不可撤销</div>';
-                    modalFooter.innerHTML = '<button type="button" class="btn btn-load-cancel" id="btnLoadBack"><i class="bi bi-arrow-left"></i> 返回</button>'
-                        + '<button type="button" class="btn btn-load-replace" id="btnLoadConfirm"><i class="bi bi-arrow-repeat"></i> 确认覆盖</button>';
-                } else {
-                    modalTitle.textContent = "确认追加";
-                    modalBody.innerHTML = '<div class="load-lib-icon"><i class="bi bi-plus-circle"></i></div>'
-                        + '<div class="load-lib-confirm-text">将在当前 <strong>' + testCases.length + '</strong> 条用例末尾<br>追加库中「' + escHtml(data.name) + '」的 <strong>' + cases.length + '</strong> 条用例。</div>';
-                    modalFooter.innerHTML = '<button type="button" class="btn btn-load-cancel" id="btnLoadBack"><i class="bi bi-arrow-left"></i> 返回</button>'
-                        + '<button type="button" class="btn btn-load-append" id="btnLoadConfirm"><i class="bi bi-check-lg"></i> 确认追加</button>';
-                }
-                document.getElementById("btnLoadBack").addEventListener("click", showChoice);
-                document.getElementById("btnLoadConfirm").addEventListener("click", () => {
-                    loadModal.hide();
-                    if (mode === "append") {
-                        pushUndo();
-                        testCases = testCases.concat(cases);
-                        testCases.forEach(function (tc, i) { tc.case_id = "TC-" + String(i + 1).padStart(3, "0"); });
-                        saveToStorage();
-                        updateExportInfo();
-                        resultsArea.style.display = "";
-                        renderTable();
-                        libraryModal.hide();
-                        navigateTo("cases");
-                        toast("已追加「" + data.name + "」(" + cases.length + " 条)", "success");
-                    } else {
-                        applyLibraryLoad(cases, data);
-                    }
-                });
-            }
-
-            showChoice();
-            loadModal.show();
-        } catch (err) {
-            if (btn) btn.disabled = false;
-            showError("加载用例失败：" + (err.message || err));
-        }
-    }
-
-    function applyLibraryLoad(cases, data) {
-        pushUndo();
-        testCases = cases;
-        testCases.forEach(function (tc, i) { tc.case_id = "TC-" + String(i + 1).padStart(3, "0"); });
-
-        if (data.requirement_text) {
-            var reqEl = document.getElementById("requirementText");
-            if (reqEl && !reqEl.value.trim()) {
-                reqEl.value = data.requirement_text;
-                reqEl.dispatchEvent(new Event("input"));
-            }
-        }
-
-        saveToStorage();
-        updateExportInfo();
-        resultsArea.style.display = "";
-        renderTable();
-        libraryModal.hide();
-        navigateTo("cases");
-        toast("已加载「" + data.name + "」(" + cases.length + " 条)", "success");
-    }
-
-    async function deleteFromLibrary(id, btn) {
-        if (!(await showConfirm("确定从用例库中删除此条目？此操作不可恢复。"))) return;
-        if (btn) btn.disabled = true;
-        try {
-            const resp = await fetch("/api/library/" + id, { method: "DELETE" });
-            if (!resp.ok) throw new Error((await resp.json()).detail?.message || "删除失败");
-            toast("已删除", "success");
-            loadLibraryContent(currentLibFolderId);
-        } catch (err) {
-            showError("删除失败：" + (err.message || err));
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    }
-
+    // Library functions moved to modules/library.js (initLibrary with callbacks)
     // ---- Helpers ----
     function ensureDatalists() {
         const container = document.getElementById("datalistContainer");
@@ -3145,10 +2464,11 @@ document.addEventListener("DOMContentLoaded", () => {
         tableHead.innerHTML = "";
         caseCount.textContent = testCases.length;
         if (btnSaveToLib) btnSaveToLib.style.display = testCases.length > 0 ? "" : "none";
-        updateExportInfo();
+        window.updateExportInfo();
 
         if (testCases.length === 0) {
-            const colSpan = (selectedFields.length || 1) + 3;
+            const fCount = getActiveFields().length;
+            const colSpan = (fCount || 1) + 3;
             tableHead.innerHTML = "<tr><th></th><th>#</th><th colspan='" + (colSpan - 2) + "'>测试用例</th></tr>";
             tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="empty-table-msg">
                 <i class="bi bi-inbox" style="font-size:2rem;"></i><p>暂无测试用例。</p></td></tr>`;
@@ -3157,10 +2477,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const filtered = applyFilters();
+        const activeFlds = getActiveFields();
         let headerHtml = '<tr><th style="width:30px;"><input type="checkbox" id="selectAll" title="全选"></th><th style="width:40px;">#</th>';
-        for (const key of selectedFields) {
-            const f = FIELD_BY_KEY[key];
-            if (f) headerHtml += `<th>${f.label}</th>`;
+        for (const fd of activeFlds) {
+            headerHtml += `<th>${escHtml(fd.label)}</th>`;
         }
         headerHtml += '<th style="width:80px;">详情</th></tr>';
         tableHead.innerHTML = headerHtml;
@@ -3178,9 +2498,11 @@ document.addEventListener("DOMContentLoaded", () => {
             tr.draggable = true;
             let cells = `<td><input type="checkbox" class="row-checkbox" data-index="${index}"></td><td class="drag-handle"><i class="bi bi-grip-vertical"></i> ${index + 1}</td>`;
 
-            for (const key of selectedFields) {
-                const f = FIELD_BY_KEY[key];
-                if (!f) { cells += "<td></td>"; continue; }
+            for (const fd of activeFlds) {
+                const key = fd.key;
+                const stdField = fd.predefined ? FIELD_BY_KEY[key] : null;
+                const fieldType = stdField ? stdField.type : fd.type;
+                const fieldOptions = stdField ? (stdField.options || null) : (fd.options || null);
                 const val = escHtml(String(tc[key] || ""));
 
                 if (key === "review_status") {
@@ -3197,12 +2519,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     cells += `<td><select data-field="${key}" data-index="${index}" class="exec-select">${opts}</select></td>`;
                 } else if (key === "tags") {
                     cells += `<td><input type="text" value="${val}" data-field="${key}" data-index="${index}" class="tag-input" placeholder="逗号分隔"></td>`;
-                } else if (f.type === "select") {
-                    const opts = (f.options || []).map(o =>
+                } else if (fieldType === "select") {
+                    const opts = (fieldOptions || []).map(o =>
                         `<option value="${o}" ${tc[key] === o ? "selected" : ""}>${o}</option>`
                     ).join("");
                     cells += `<td><select data-field="${key}" data-index="${index}">${opts}</select></td>`;
-                } else if (f.type === "combo") {
+                } else if (fieldType === "combo") {
                     cells += `<td><input type="text" value="${val}" data-field="${key}" data-index="${index}" list="dl_${key}"></td>`;
                 } else {
                     cells += `<td><input type="text" value="${val}" data-field="${key}" data-index="${index}"></td>`;
@@ -3416,7 +2738,168 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filterExec) filterExec.addEventListener("change", () => rerender());
 
 
-    // ---- Navigate to: consolidated hook for all pages ----
+    // ---- Regression analysis ----
+    let _regressionModules = [];
+    let _regressionSelected = new Set();
+
+    async function loadRegressionModules() {
+        const container = document.getElementById("regressionModules");
+        const noLib = document.getElementById("regressionNoLib");
+        const stepModules = document.getElementById("regressionStepModules");
+        const stepResults = document.getElementById("regressionStepResults");
+        if (!container) return;
+
+        try {
+            const data = await window.apiFetch("/api/regression/modules");
+            _regressionModules = data.modules || [];
+
+            if (_regressionModules.length === 0) {
+                if (stepModules) stepModules.style.display = "none";
+                if (stepResults) stepResults.style.display = "none";
+                if (noLib) noLib.style.display = "";
+                return;
+            }
+
+            if (noLib) noLib.style.display = "none";
+            if (stepModules) stepModules.style.display = "";
+
+            let html = "";
+            _regressionModules.forEach(m => {
+                const checked = _regressionSelected.has(m) ? "checked" : "";
+                html += '<label class="regression-module-item' + (checked ? ' selected' : '') + '">';
+                html += '<input type="checkbox" value="' + window.escHtml(m) + '" ' + checked + '>';
+                html += window.escHtml(m) + '</label>';
+            });
+            container.innerHTML = html;
+
+            container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+                cb.addEventListener("change", () => {
+                    const label = cb.closest(".regression-module-item");
+                    if (cb.checked) {
+                        _regressionSelected.add(cb.value);
+                        if (label) label.classList.add("selected");
+                    } else {
+                        _regressionSelected.delete(cb.value);
+                        if (label) label.classList.remove("selected");
+                    }
+                    document.getElementById("btnRegressionAnalyze").disabled = _regressionSelected.size === 0;
+                });
+            });
+
+            document.getElementById("btnRegressionAnalyze").disabled = _regressionSelected.size === 0;
+        } catch (err) {
+            container.innerHTML = '<div class="text-center text-muted py-3">加载失败</div>';
+        }
+    }
+
+    async function doRegressionAnalyze() {
+        if (_regressionSelected.size === 0) return;
+        const btn = document.getElementById("btnRegressionAnalyze");
+        const body = document.getElementById("regressionResultsBody");
+        const stepResults = document.getElementById("regressionStepResults");
+        if (!body || !stepResults) return;
+
+        setBtnLoading(btn, true);
+        stepResults.style.display = "none";
+
+        try {
+            const data = await window.apiFetch("/api/regression/analyze", {
+                method: "POST",
+                body: JSON.stringify({ modules: Array.from(_regressionSelected) }),
+            });
+
+            const summary = data.summary || {};
+            const groups = summary.groups || {};
+
+            let html = '<div class="regression-summary">';
+            html += '<div class="regression-summary-grid">';
+
+            const total = summary.total || 0;
+            html += '<div class="regression-stat total"><div class="regression-stat-value">' + total + '</div><div class="regression-stat-label">总计用例数</div></div>';
+
+            const priorityOrder = ["P0", "P1", "P2", "P3"];
+            const priorityLabels = { "P0": "P0 - 阻塞", "P1": "P1 - 重要", "P2": "P2 - 边界", "P3": "P3 - 优化" };
+            priorityOrder.forEach(p => {
+                const count = groups[p] || 0;
+                if (count > 0) {
+                    html += '<div class="regression-stat ' + p.toLowerCase() + '"><div class="regression-stat-value">' + count + '</div><div class="regression-stat-label">' + (priorityLabels[p] || p) + '</div></div>';
+                }
+            });
+
+            html += '<div class="regression-stat"><div class="regression-stat-value">' + (summary.estimated_hours || 0) + 'h</div><div class="regression-stat-label">预估执行时间</div></div>';
+            html += '</div></div>';
+
+            // Set list
+            const sets = data.sets || [];
+            if (sets.length > 0) {
+                html += '<div class="regression-set-list"><strong class="d-block mb-2">涉及用例集 (' + sets.length + ' 个)</strong>';
+                sets.forEach(s => {
+                    html += '<div class="regression-set-item"><span class="set-name">' + window.escHtml(s.set_name) + '</span><span class="set-count">' + s.count + ' 条</span></div>';
+                });
+                html += '</div>';
+            }
+
+            // Export button
+            html += '<div class="mt-3"><button class="btn btn-accent btn-sm" id="btnRegressionExport"><i class="bi bi-download"></i> 导出回归用例清单</button></div>';
+
+            body.innerHTML = html;
+            stepResults.style.display = "";
+
+            document.getElementById("btnRegressionExport")?.addEventListener("click", () => exportRegressionCases(data.sets || []));
+        } catch (err) {
+            body.innerHTML = '<div class="alert alert-error">分析失败：' + (err.message || err) + '</div>';
+            stepResults.style.display = "";
+        } finally {
+            setBtnLoading(btn, false);
+        }
+    }
+
+    function exportRegressionCases(sets) {
+        const allCases = [];
+        sets.forEach(s => {
+            (s.cases || []).forEach(c => {
+                allCases.push({
+                    case_id: c.case_id || "TC-???",
+                    module: c.module || "",
+                    title: c.title || "",
+                    priority: c.priority || "P3",
+                    preconditions: c.preconditions || "",
+                    steps: c.steps || "",
+                    expected: c.expected || "",
+                });
+            });
+        });
+        if (allCases.length === 0) { showError("没有可导出的用例"); return; }
+
+        // Temporarily set testCases for export
+        const saved = window.testCases;
+        window.testCases = allCases;
+        document.querySelector('[data-page="export"]')?.click();
+        setTimeout(() => {
+            window.testCases = saved;
+        }, 100);
+    }
+
+    window.initRegressionPage = function () {
+        _regressionSelected.clear();
+        loadRegressionModules();
+
+        document.getElementById("btnRegressionRefresh")?.addEventListener("click", loadRegressionModules);
+        document.getElementById("btnRegressionSelectAll")?.addEventListener("click", () => {
+            _regressionModules.forEach(m => _regressionSelected.add(m));
+            loadRegressionModules();
+            document.getElementById("btnRegressionAnalyze").disabled = false;
+        });
+        document.getElementById("btnRegressionDeselectAll")?.addEventListener("click", () => {
+            _regressionSelected.clear();
+            loadRegressionModules();
+            document.getElementById("btnRegressionAnalyze").disabled = true;
+        });
+        document.getElementById("btnRegressionAnalyze")?.addEventListener("click", doRegressionAnalyze);
+    };
+
+
+    // ---- Navigate to: consolidated hook for all pages —
     const origNav = navigateTo;
     navigateTo = function(page) {
         origNav(page);
@@ -3430,7 +2913,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (page === "bugreport" && typeof window.refreshBugList === "function") window.refreshBugList();
         if (page === "history" && typeof window.initHistoryPage === "function") window.initHistoryPage();
+        if (page === "regression" && typeof window.initRegressionPage === "function") window.initRegressionPage();
         if (page === "operations" && typeof window.initOperationsPage === "function") window.initOperationsPage();
+        if (page === "admin" && typeof window.initAdminPage === "function") window.initAdminPage();
         if (page === "toolkit") { if (typeof window.switchToolkitTab === "function") window.switchToolkitTab("encoding"); if (typeof window.updateTimestamp === "function") window.updateTimestamp(); }
     };
 
@@ -3444,6 +2929,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.getTestCases = () => testCases;
         window.openDetailModal = openDetailModal;
         Object.defineProperty(window, 'userApiKey', { get: () => userApiKey, set: v => { userApiKey = v; } });
+        Object.defineProperty(window, 'userApiBaseUrl', { get: () => userApiBaseUrl, set: v => { userApiBaseUrl = v; } });
         Object.defineProperty(window, 'userModel', { get: () => userModel, set: v => { userModel = v; } });
         window.navigateTo = navigateTo;
         window.undo = undo;
@@ -3451,6 +2937,8 @@ document.addEventListener("DOMContentLoaded", () => {
         window.deleteSelected = deleteSelected;
         Object.defineProperty(window, 'sessionTokens', { get: () => sessionTokens });
         window.updateApiWarnDot = updateApiWarnDot;
+        window.rerender = rerender;
+        window.saveToStorage = saveToStorage;
     } catch(e) { console.error('window exports:', e); }
 
     // Init extracted modules (window exports already set)
@@ -3467,6 +2955,42 @@ document.addEventListener("DOMContentLoaded", () => {
     try { if (typeof initScriptGen === "function") initScriptGen(); } catch(e) { console.error("initScriptGen:", e); }
     try { if (typeof initAuth === "function") initAuth(); } catch(e) { console.error("initAuth:", e); }
     try { if (typeof initShortcuts === "function") initShortcuts(); } catch(e) { console.error("initShortcuts:", e); }
+
+    // Init export module (button listeners)
+    if (typeof window.initExport === "function") window.initExport();
+
+    // Init library module (load/save library, folder tree, sharing)
+    if (typeof window.initLibrary === "function") window.initLibrary({
+        onAppendTestCases: (cases, data) => {
+            pushUndo();
+            testCases = testCases.concat(cases);
+            testCases.forEach((tc, i) => { tc.case_id = "TC-" + String(i + 1).padStart(3, "0"); });
+            saveToStorage();
+            window.updateExportInfo();
+            resultsArea.style.display = "";
+            renderTable();
+            navigateTo("cases");
+            toast("已追加«" + data.name + "»(" + cases.length + " 条)", "success");
+        },
+        onReplaceTestCases: (cases, data) => {
+            pushUndo();
+            testCases = cases;
+            testCases.forEach(function (tc, i) { tc.case_id = "TC-" + String(i + 1).padStart(3, "0"); });
+            if (data.requirement_text) {
+                var reqEl = document.getElementById("requirementText");
+                if (reqEl && !reqEl.value.trim()) {
+                    reqEl.value = data.requirement_text;
+                    reqEl.dispatchEvent(new Event("input"));
+                }
+            }
+            saveToStorage();
+            window.updateExportInfo();
+            resultsArea.style.display = "";
+            renderTable();
+            navigateTo("cases");
+            toast("已加载«" + data.name + "»(" + cases.length + " 条)", "success");
+        },
+    });
 
     // Check auth on load
     try { if (typeof checkAuth === "function") checkAuth(); } catch(e) { console.error("checkAuth:", e); }

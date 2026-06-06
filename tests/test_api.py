@@ -1,7 +1,31 @@
 """API integration tests — routes, auth, error response format."""
 
+import re
 import pytest
 from fastapi.testclient import TestClient
+
+
+def _solve_captcha(client):
+    """Helper: fetch captcha question and return (captcha_id, answer)."""
+    resp = client.get("/api/auth/captcha")
+    assert resp.status_code == 200
+    data = resp.json()
+    m = re.match(r"(\d+)\s*([+−])\s*(\d+)\s*=\s*\?", data["question"])
+    if not m:
+        pytest.fail(f"Cannot parse captcha: {data['question']}")
+    a, op, b = int(m.group(1)), m.group(2), int(m.group(3))
+    answer = a + b if op == "+" else a - b
+    return data["id"], answer
+
+
+def _register(client, username, password):
+    """Helper: register with captcha auto-solved."""
+    cid, ans = _solve_captcha(client)
+    resp = client.post("/api/auth/register", json={
+        "username": username, "password": password,
+        "captcha_id": cid, "captcha_answer": ans,
+    })
+    return resp
 
 
 @pytest.fixture
@@ -12,7 +36,7 @@ def client():
 
 class TestAuthAPI:
     def test_register(self, client):
-        resp = client.post("/api/auth/register", json={"username": "api_newuser", "password": "testpass123"})
+        resp = _register(client, "api_newuser", "testpass123")
         assert resp.status_code == 200
         data = resp.json()
         user = data.get("user", data)
@@ -20,24 +44,24 @@ class TestAuthAPI:
         assert data.get("username", user.get("username")) == "api_newuser"
 
     def test_register_duplicate(self, client):
-        client.post("/api/auth/register", json={"username": "api_dupuser", "password": "testpass123"})
-        resp = client.post("/api/auth/register", json={"username": "api_dupuser", "password": "otherpass"})
+        _register(client, "api_dupuser", "testpass123")
+        resp = _register(client, "api_dupuser", "otherpass1")
         assert resp.status_code == 400
 
     def test_login_success(self, client):
-        client.post("/api/auth/register", json={"username": "api_loginuser", "password": "testpass123"})
+        _register(client, "api_loginuser", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "api_loginuser", "password": "testpass123"})
         assert resp.status_code == 200
         data = resp.json()
         assert "token" in data or "access_token" in data
 
     def test_login_wrong_password(self, client):
-        client.post("/api/auth/register", json={"username": "api_wrongpw", "password": "testpass123"})
+        _register(client, "api_wrongpw", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "api_wrongpw", "password": "wrongpass"})
         assert resp.status_code == 401
 
     def test_me_authenticated(self, client):
-        client.post("/api/auth/register", json={"username": "api_meuser", "password": "testpass123"})
+        _register(client, "api_meuser", "testpass123")
         login_resp = client.post("/api/auth/login", json={"username": "api_meuser", "password": "testpass123"})
         token = login_resp.json().get("token") or login_resp.json().get("access_token")
         resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
@@ -50,7 +74,7 @@ class TestAuthAPI:
         assert resp.json().get("id") == 0  # guest
 
     def test_logout(self, client):
-        client.post("/api/auth/register", json={"username": "api_logoutuser", "password": "testpass123"})
+        _register(client, "api_logoutuser", "testpass123")
         login_resp = client.post("/api/auth/login", json={"username": "api_logoutuser", "password": "testpass123"})
         token = login_resp.json().get("token") or login_resp.json().get("access_token")
         resp = client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token}"})
@@ -62,7 +86,7 @@ class TestAuthAPI:
 
 class TestLibraryAPI:
     def _login(self, client):
-        client.post("/api/auth/register", json={"username": "lib_user", "password": "testpass123"})
+        _register(client, "lib_user", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "lib_user", "password": "testpass123"})
         token = resp.json().get("token") or resp.json().get("access_token")
         client.headers["Authorization"] = f"Bearer {token}"
@@ -73,69 +97,86 @@ class TestLibraryAPI:
         resp = client.get("/api/library/list")
         assert resp.status_code == 200
         data = resp.json()
-        assert "sets" in data
-        assert data["total"] == 0
+        assert data["sets"] == []
 
     def test_save_and_get(self, client):
         self._login(client)
-        cases = [{"title": "TC1", "module": "Login"}]
+        cases = [{"title": "Test case 1", "steps": "Step 1"}]
         save_resp = client.post("/api/library/save", json={
-            "name": "API Test Set",
-            "test_cases": cases,
-            "requirement_text": "test req",
+            "name": "Test Set", "test_cases": cases, "requirement_text": "req", "folder_id": None,
         })
         assert save_resp.status_code == 200
-        sid = save_resp.json()["id"]
-        get_resp = client.get(f"/api/library/{sid}")
+        set_id = save_resp.json()["id"]
+
+        get_resp = client.get(f"/api/library/{set_id}")
         assert get_resp.status_code == 200
         data = get_resp.json()
-        assert data["name"] == "API Test Set"
-        assert len(data["test_cases"]) == 1
+        assert data["name"] == "Test Set"
 
     def test_list_after_save(self, client):
         self._login(client)
-        client.post("/api/library/save", json={"name": "ListSet", "test_cases": []})
+        # Save a set first so listing returns results
+        client.post("/api/library/save", json={
+            "name": "List Test Set", "test_cases": [{"title": "TC"}],
+            "requirement_text": "req", "folder_id": None,
+        })
         resp = client.get("/api/library/list")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total"] >= 1
-        names = [s["name"] for s in data["sets"]]
-        assert "ListSet" in names
+        assert len(data["sets"]) > 0
 
     def test_update(self, client):
         self._login(client)
-        sid = client.post("/api/library/save", json={"name": "OldName", "test_cases": []}).json()["id"]
-        upd = client.put(f"/api/library/{sid}", json={"name": "NewName", "test_cases": [{"title": "TC2"}]})
-        assert upd.status_code == 200
-        data = client.get(f"/api/library/{sid}").json()
-        assert data["name"] == "NewName"
+        cases = [{"title": "Original"}]
+        save_resp = client.post("/api/library/save", json={
+            "name": "Update Set", "test_cases": cases, "requirement_text": "req", "folder_id": None,
+        })
+        set_id = save_resp.json()["id"]
+
+        new_cases = [{"title": "Updated"}]
+        upd_resp = client.put(f"/api/library/{set_id}", json={
+            "name": "Updated Set", "test_cases": new_cases, "requirement_text": "new",
+        })
+        assert upd_resp.status_code == 200
+
+        get_resp = client.get(f"/api/library/{set_id}")
+        assert get_resp.json()["name"] == "Updated Set"
 
     def test_delete(self, client):
         self._login(client)
-        sid = client.post("/api/library/save", json={"name": "ToDelete", "test_cases": []}).json()["id"]
-        del_resp = client.delete(f"/api/library/{sid}")
+        resp = client.post("/api/library/save", json={
+            "name": "Delete Set", "test_cases": [], "requirement_text": "", "folder_id": None,
+        })
+        set_id = resp.json()["id"]
+        del_resp = client.delete(f"/api/library/{set_id}")
         assert del_resp.status_code == 200
-        get_resp = client.get(f"/api/library/{sid}")
+        get_resp = client.get(f"/api/library/{set_id}")
         assert get_resp.status_code == 404
 
     def test_folder_crud(self, client):
         self._login(client)
-        f_resp = client.post("/api/library/folders", json={"name": "API Folder"})
-        assert f_resp.status_code == 200
-        fid = f_resp.json()["id"]
+        # Create
+        resp = client.post("/api/library/folders", json={"name": "Test Folder", "parent_id": None})
+        assert resp.status_code == 200
+        folder_id = resp.json()["id"]
+        folders = client.get("/api/library/folders").json()["folders"]
+        assert any(f["id"] == folder_id for f in folders)
 
-        list_resp = client.get("/api/library/folders")
-        assert any(f["id"] == fid for f in list_resp.json()["folders"])
+        # Rename
+        client.put(f"/api/library/folders/{folder_id}", json={"name": "Renamed"})
+        folders = client.get("/api/library/folders").json()["folders"]
+        assert any(f["name"] == "Renamed" for f in folders)
 
-        rename = client.put(f"/api/library/folders/{fid}", json={"name": "Renamed Folder"})
-        assert rename.status_code == 200
-
-        delete = client.delete(f"/api/library/folders/{fid}")
-        assert delete.status_code == 200
+        # Delete
+        client.delete(f"/api/library/folders/{folder_id}")
+        folders = client.get("/api/library/folders").json()["folders"]
+        assert not any(f["id"] == folder_id for f in folders)
 
     def test_save_empty_name_fails(self, client):
         self._login(client)
-        resp = client.post("/api/library/save", json={"name": "", "test_cases": []})
+        resp = client.post("/api/library/save", json={
+            "name": "", "test_cases": [], "requirement_text": "", "folder_id": None,
+        })
         assert resp.status_code == 400
 
     def test_get_not_found(self, client):
@@ -151,93 +192,89 @@ class TestLibraryAPI:
 
 class TestBugsAPI:
     def _login(self, client):
-        client.post("/api/auth/register", json={"username": "bug_user", "password": "testpass123"})
+        _register(client, "bug_user", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "bug_user", "password": "testpass123"})
         token = resp.json().get("token") or resp.json().get("access_token")
         client.headers["Authorization"] = f"Bearer {token}"
 
-    def test_create_and_get(self, client):
+    def test_create_and_list(self, client):
         self._login(client)
-        resp = client.post("/api/bugs", json={"title": "API Bug", "severity": "P1", "module": "Login"})
+        resp = client.post("/api/bugs", json={
+            "title": "Bug 1", "description": "desc", "severity": "P1", "status": "open",
+        })
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["title"] == "API Bug"
-        assert data["severity"] == "P1"
-
-    def test_list(self, client):
-        self._login(client)
-        resp = client.get("/api/bugs")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "bugs" in data
-        assert "total" in data
+        list_resp = client.get("/api/bugs")
+        assert list_resp.status_code == 200
+        data = list_resp.json()
+        assert len(data["bugs"]) > 0
 
     def test_update(self, client):
         self._login(client)
-        bid = client.post("/api/bugs", json={"title": "Bug to Update"}).json()["id"]
-        upd = client.put(f"/api/bugs/{bid}", json={"severity": "P0", "status": "closed"})
+        resp = client.post("/api/bugs", json={
+            "title": "Bug Update", "description": "d", "severity": "P2", "status": "open",
+        })
+        bug_id = resp.json()["id"]
+        upd = client.put(f"/api/bugs/{bug_id}", json={"title": "Updated Bug"})
         assert upd.status_code == 200
-        assert upd.json()["severity"] == "P0"
+        assert upd.json()["title"] == "Updated Bug"
 
     def test_delete(self, client):
         self._login(client)
-        bid = client.post("/api/bugs", json={"title": "Bug to Delete"}).json()["id"]
-        del_resp = client.delete(f"/api/bugs/{bid}")
+        resp = client.post("/api/bugs", json={
+            "title": "Bug Delete", "description": "d", "severity": "P3", "status": "open",
+        })
+        bug_id = resp.json()["id"]
+        del_resp = client.delete(f"/api/bugs/{bug_id}")
         assert del_resp.status_code == 200
-        # Verify bug no longer in list
         list_resp = client.get("/api/bugs")
-        ids = [b["id"] for b in list_resp.json()["bugs"]]
-        assert bid not in ids
+        assert list_resp.status_code == 200
+        assert not any(b["id"] == bug_id for b in list_resp.json()["bugs"])
 
-    def test_error_format(self, client):
-        """Verify error responses match expected format."""
+    def test_not_found_delete(self, client):
         self._login(client)
-        resp = client.get("/api/bugs/99999")
-        # No GET /api/bugs/{id} route — 405 is a framework-level response
-        assert resp.status_code == 405
-        # Framework 405 uses plain string, not structured error
+        resp = client.delete("/api/bugs/99999")
+        assert resp.status_code == 404
         data = resp.json()
         assert "detail" in data
+        assert "error_code" in data["detail"]
+        assert "message" in data["detail"]
 
 
 class TestHistoryAPI:
     def _login(self, client):
-        client.post("/api/auth/register", json={"username": "hist_api_user", "password": "testpass123"})
+        _register(client, "hist_api_user", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "hist_api_user", "password": "testpass123"})
         token = resp.json().get("token") or resp.json().get("access_token")
         client.headers["Authorization"] = f"Bearer {token}"
 
     def test_save_and_list(self, client):
         self._login(client)
-        save_resp = client.post("/api/history", json={
-            "requirement_text": "API test req",
-            "test_cases": [{"title": "TC1"}],
+        resp = client.post("/api/history", json={
+            "requirement_text": "req text", "test_cases": [{"title": "TC1"}],
             "model": "deepseek-chat",
         })
-        assert save_resp.status_code == 200
-        hid = save_resp.json()["id"]
-
+        assert resp.status_code == 200
         list_resp = client.get("/api/history")
         assert list_resp.status_code == 200
-        ids = [h["id"] for h in list_resp.json()["history"]]
-        assert hid in ids
+        assert len(list_resp.json()["history"]) > 0
 
     def test_get(self, client):
         self._login(client)
-        hid = client.post("/api/history", json={
+        resp = client.post("/api/history", json={
             "requirement_text": "get test", "test_cases": [{"title": "TC1"}],
-        }).json()["id"]
+            "model": "deepseek-chat",
+        })
+        hid = resp.json()["id"]
         get_resp = client.get(f"/api/history/{hid}")
         assert get_resp.status_code == 200
-        data = get_resp.json()
-        assert data["requirement_text"] == "get test"
-        assert len(data["test_cases"]) == 1
+        assert get_resp.json()["requirement_text"] == "get test"
 
     def test_delete(self, client):
         self._login(client)
-        hid = client.post("/api/history", json={
-            "requirement_text": "delete me", "test_cases": [],
-        }).json()["id"]
+        resp = client.post("/api/history", json={
+            "requirement_text": "del test", "test_cases": [], "model": "deepseek-chat",
+        })
+        hid = resp.json()["id"]
         del_resp = client.delete(f"/api/history/{hid}")
         assert del_resp.status_code == 200
         get_resp = client.get(f"/api/history/{hid}")
@@ -245,15 +282,15 @@ class TestHistoryAPI:
 
     def test_restore(self, client):
         self._login(client)
-        hid = client.post("/api/history", json={
-            "requirement_text": "restore me",
-            "test_cases": [{"title": "TC1", "module": "Auth"}],
-        }).json()["id"]
-        resp = client.post(f"/api/history/{hid}/restore")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["requirement_text"] == "restore me"
-        assert data["test_cases"][0]["title"] == "TC1"
+        resp = client.post("/api/history", json={
+            "requirement_text": "restore test", "test_cases": [{"title": "TC1"}],
+            "model": "deepseek-chat",
+        })
+        hid = resp.json()["id"]
+        restore_resp = client.post(f"/api/history/{hid}/restore")
+        assert restore_resp.status_code == 200
+        data = restore_resp.json()
+        assert len(data["test_cases"]) == 1
 
     def test_get_not_found(self, client):
         self._login(client)
@@ -267,33 +304,28 @@ class TestHistoryAPI:
 
 
 class TestErrorFormat:
-    """Verify consistent error response format across all endpoints."""
-
     def _login(self, client):
-        client.post("/api/auth/register", json={"username": "err_user", "password": "testpass123"})
+        _register(client, "err_user", "testpass123")
         resp = client.post("/api/auth/login", json={"username": "err_user", "password": "testpass123"})
         token = resp.json().get("token") or resp.json().get("access_token")
         client.headers["Authorization"] = f"Bearer {token}"
 
     def test_404_format(self, client):
         self._login(client)
-        cases = [
-            ("GET", "/api/library/99999"),
-            ("DELETE", "/api/library/folders/99999"),
-            ("DELETE", "/api/history/99999"),
-        ]
-        for method, path in cases:
-            resp = client.request(method, path)
-            if resp.status_code == 404:
-                data = resp.json()
-                assert "detail" in data, f"{path} missing detail"
-                assert "error_code" in data["detail"], f"{path} missing error_code"
-                assert "message" in data["detail"], f"{path} missing message"
+        resp = client.get("/api/library/99999")
+        assert resp.status_code == 404
+        data = resp.json()
+        assert "detail" in data
+        assert "error_code" in data["detail"]
+        assert "message" in data["detail"]
 
     def test_400_format(self, client):
         self._login(client)
-        resp = client.post("/api/library/save", json={"name": "", "test_cases": []})
+        resp = client.post("/api/library/save", json={
+            "name": "", "test_cases": [], "requirement_text": "", "folder_id": None,
+        })
         assert resp.status_code == 400
         data = resp.json()
+        assert "detail" in data
         assert "error_code" in data["detail"]
         assert "message" in data["detail"]

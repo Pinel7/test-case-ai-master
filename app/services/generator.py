@@ -17,6 +17,20 @@ logger = logging.getLogger(__name__)
 MAX_RETRIES = 2
 RETRY_DELAY = 2  # seconds
 
+# Per-1K-token pricing in USD (approximate, update as models change)
+MODEL_PRICING = {
+    "deepseek-chat":                {"input": 0.00027,  "output": 0.00110},
+    "deepseek-reasoner":            {"input": 0.00055,  "output": 0.00219},
+    "claude-sonnet-4-20250514":     {"input": 0.00300,  "output": 0.01500},
+    "claude-opus-4-20250514":       {"input": 0.01500,  "output": 0.07500},
+    "claude-haiku-4-20250514":      {"input": 0.00025,  "output": 0.00125},
+}
+
+def _compute_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Approximate cost in USD from token counts and model pricing."""
+    pricing = MODEL_PRICING.get(model, {"input": 0.001, "output": 0.002})
+    return (input_tokens / 1000) * pricing["input"] + (output_tokens / 1000) * pricing["output"]
+
 # In-memory LLM response cache: {cache_key: (expires_at, result)}
 _cache: dict[str, tuple[float, tuple]] = {}
 _CACHE_TTL = 3600  # 1 hour
@@ -39,23 +53,66 @@ def _cache_get(key: str):
 def _cache_set(key: str, value: tuple):
     _cache[key] = (time.time() + _CACHE_TTL, value)
 
-def _get_deepseek_client(api_key: str):
+def _get_deepseek_client(api_key: str, base_url: str | None = None):
     from openai import AsyncOpenAI
-    return AsyncOpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+    return AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url or "https://api.deepseek.com",
+        timeout=30,
+        max_retries=0,
+    )
 
 
-def _get_anthropic_client(api_key: str):
+def _get_anthropic_client(api_key: str, base_url: str | None = None):
     from anthropic import AsyncAnthropic
-    return AsyncAnthropic(api_key=api_key)
+    kwargs = {"api_key": api_key}
+    if base_url:
+        kwargs["base_url"] = base_url
+    return AsyncAnthropic(**kwargs)
 
 SYSTEM_PROMPT = """You are a senior QA engineer with deep expertise in software testing methodology. Your task is to analyze the provided requirement document and produce comprehensive, production-quality test cases.
 
-## Analysis Methodology (perform internally — do not output)
-For each functional area in the requirement:
-1. Identify the core behavior and success path (happy path)
-2. Identify what could go wrong (error/exception paths)
-3. Identify boundary conditions (edge values, limits, thresholds, state transitions)
-4. Note any implicit requirements or assumptions that need testing
+## Testing Methodology — Apply ALL relevant techniques below (perform internally, do not output)
+
+For EACH functional area in the requirement, systematically apply these testing techniques:
+
+### 1. Equivalence Partitioning (等价类划分)
+- Divide all possible inputs into valid and invalid equivalence classes
+- Select ONE representative from each class (not multiple from the same class)
+- Cover: valid input classes, invalid input classes, null/empty classes
+- Apply to: input fields, API parameters, data formats, file types
+
+### 2. Boundary Value Analysis (边界值分析)
+- For each equivalence class boundary, test: the boundary value itself, value just below boundary, value just above boundary
+- Apply to: numeric ranges, string length limits, list sizes, time/duration thresholds, pagination
+- Examples: maxLength-1, maxLength, maxLength+1; minimum, minimum+1, maximum, maximum-1
+
+### 3. Decision Table Testing (判定表/因果图)
+- For business rules with multiple conditions (2+), construct a decision table
+- Cover: all combinations of true/false for each condition, or use pairwise if >4 conditions
+- Identify: impossible combinations, default rules, rule conflicts
+- Apply to: approval workflows, discount/pricing rules, permission/role logic, multi-condition branching
+
+### 4. State Transition Testing (状态转换)
+- Identify all valid states and transitions between them
+- Test: each valid transition, invalid/forbidden transitions, state entry/exit events
+- Apply to: order lifecycle (pending→paid→shipped→delivered→cancelled), user session states, workflow approvals
+
+### 5. Error Guessing (错误推测法)
+- Based on common defect patterns, test for: SQL injection, XSS, special characters, Unicode, extremely long inputs, rapid repeated submissions, concurrent access, session expiry, network timeout, file upload limits
+- Apply to: text inputs (try <script>, ', ", %, \\), file uploads (try empty file, oversized, wrong format), API calls (try missing fields, extra fields, wrong types)
+
+### 6. Scenario / Use Case Testing (场景法)
+- Identify end-to-end user journeys that span multiple functions
+- Test: primary success scenario, alternate scenarios, exception scenarios
+- Connect related test cases to form complete user workflows
+
+### 7. Consistency & Cross-Module Check
+- Check if this feature interacts with other modules (e.g., login affects session management, order affects inventory)
+- Include test cases that verify cross-module behavior
+- Flag implicit dependencies that the requirement does not mention
+
+When choosing test types, prefer 边界测试 and 异常测试 for areas with clear input rules, 场景测试 for complex workflows, and 判定表 for business logic with multiple conditions.
 
 ## Output Instructions
 You MUST call the `create_test_cases` function with a JSON array of test case objects. Do NOT output test cases as text — use the function.
@@ -216,20 +273,110 @@ def _get_openai_tool_schema(fields: list[str] | None = None) -> dict:
     }
 
 
-def _build_system_prompt(case_count: int) -> str:
+def _load_prompt_from_db(name: str) -> str | None:
+    """Load a prompt template from DB, returning None to use the code default."""
+    try:
+        from app.services.database import get_active_prompt_text
+        return get_active_prompt_text(name)
+    except Exception:
+        return None
+
+
+def _build_system_prompt(case_count: int, requirement_text: str = "") -> str:
     """Build the system prompt with the target case count.
 
+    Tries DB first, falls back to SYSTEM_PROMPT constant.
     When case_count is 0, use AI-determined mode (auto).
+    If requirement_text is provided, auto-match specifications.
     """
+    base = _load_prompt_from_db("generate_main") or SYSTEM_PROMPT
     if case_count <= 0:
-        return SYSTEM_PROMPT  # Keep original "between 8 and 25" wording
-    replacement = (
-        f"Generate exactly {case_count} test case{'s' if case_count != 1 else ''}. Each test case must be unique and test a distinct scenario. If the requirement is too simple to produce {case_count} distinct test case{'s' if case_count != 1 else ''}, generate as many meaningful cases as possible."
-    )
-    return SYSTEM_PROMPT.replace(
-        "Generate between 8 and 25 test cases depending on requirement complexity. Complex requirements with many modules should have more test cases. Each test case must be unique and test a distinct scenario.",
-        replacement,
-    )
+        effective = base
+    else:
+        replacement = (
+            f"Generate exactly {case_count} test case{'s' if case_count != 1 else ''}. Each test case must be unique and test a distinct scenario. If the requirement is too simple to produce {case_count} distinct test case{'s' if case_count != 1 else ''}, generate as many meaningful cases as possible."
+        )
+        effective = base.replace(
+            "Generate between 8 and 25 test cases depending on requirement complexity. Complex requirements with many modules should have more test cases. Each test case must be unique and test a distinct scenario.",
+            replacement,
+        )
+
+    # Auto-match specifications from requirement text
+    if requirement_text:
+        try:
+            from app.services.database import match_specifications
+            keywords = _extract_spec_keywords(requirement_text)
+            if keywords:
+                matched = match_specifications(keywords)
+                if matched:
+                    sections = []
+                    for spec in matched:
+                        spec_name = spec.get("name", "未命名规范")
+                        spec_content = spec.get("content", "")
+                        if spec_content:
+                            sections.append(f"### {spec_name}\n{spec_content}")
+                    if sections:
+                        effective += (
+                            "\n\n## Applicable Test Specifications\n"
+                            "The following company-specific test writing guidelines apply to this requirement. "
+                            "You MUST follow these specifications when generating test cases:\n\n"
+                            + "\n\n".join(sections)
+                        )
+        except Exception:
+            pass  # spec matching is best-effort
+
+    return effective
+
+
+def _extract_spec_keywords(text: str) -> str:
+    """Extract potential module/keyword candidates from requirement text for spec matching."""
+    import re
+    candidates = set()
+
+    # Extract markdown headings (likely module/feature names)
+    for line in text.split("\n"):
+        line = line.strip()
+        if line.startswith("##") or line.startswith("###"):
+            heading = re.sub(r'^#+\s*', '', line).strip().rstrip('：:')
+            if heading and len(heading) < 30:
+                candidates.add(heading)
+
+    # Look for patterns like "XXX模块", "XXX功能", "XXX页面"
+    for m in re.finditer(r'([一-鿿\w]+)(?:模块|功能|页面|系统|管理|中心)', text):
+        candidates.add(m.group(1))
+        candidates.add(m.group(0))
+
+    # Add common test keywords if text mentions them
+    test_keywords_map = {
+        "登录|注册|注销|密码|验证码|认证": "登录认证",
+        "支付|退款|订单|购物车|结算": "订单支付",
+        "搜索|筛选|排序|分页|过滤": "搜索筛选",
+        "权限|角色|用户管理|组织|部门": "权限管理",
+        "导入|导出|上传|下载|批量": "导入导出",
+        "通知|消息|推送|邮件|短信": "消息通知",
+        "报表|统计|图表|分析|仪表盘": "报表统计",
+    }
+    for pattern, tag in test_keywords_map.items():
+        if re.search(pattern, text):
+            candidates.add(tag)
+
+    return ",".join(sorted(candidates)) if candidates else ""
+
+
+def _get_polish_prompt() -> str:
+    return _load_prompt_from_db("polish") or POLISH_SYSTEM_PROMPT
+
+
+def _get_outline_prompt() -> str:
+    return _load_prompt_from_db("outline") or OUTLINE_SYSTEM_PROMPT
+
+
+def _get_rtm_prompt() -> str:
+    return _load_prompt_from_db("rtm") or RTM_SYSTEM_PROMPT
+
+
+def _get_script_prompt() -> str:
+    return _load_prompt_from_db("script") or SCRIPT_SYSTEM_PROMPT
 
 
 def _extract_json_from_content(content: str) -> dict | None:
@@ -332,14 +479,33 @@ def _is_retryable(error_msg: str) -> bool:
     return any(token in error_msg.lower() for token in retryable)
 
 
+def _is_auth_error(e: Exception) -> bool:
+    """Check if an exception is an authentication/authorization error."""
+    try:
+        from openai import AuthenticationError as OpenAIAuthError
+        if isinstance(e, OpenAIAuthError):
+            return True
+    except ImportError:
+        pass
+    try:
+        from anthropic import AuthenticationError as AnthropicAuthError
+        if isinstance(e, AnthropicAuthError):
+            return True
+    except ImportError:
+        pass
+    error_msg = str(e).lower()
+    return "401" in error_msg or "authentication" in error_msg or "api key" in error_msg or "auth fails" in error_msg
+
+
 async def _generate_with_deepseek(
     requirement_text: str, api_key: str | None, model: str,
-    fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES
+    fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[TestCase], list[str], dict | None]:
     key = _get_deepseek_key(api_key)
-    client = _get_deepseek_client(key)
+    client = _get_deepseek_client(key, base_url=api_base_url)
     tool_schema = _get_openai_tool_schema(fields)
-    system_prompt = _build_system_prompt(case_count)
+    system_prompt = _build_system_prompt(case_count, requirement_text)
 
     last_error = None
     for attempt in range(retries + 1):
@@ -359,9 +525,9 @@ async def _generate_with_deepseek(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("DeepSeek API attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -402,7 +568,9 @@ async def _generate_with_deepseek(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0, "output_tokens": u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0, "model": model}
+        input_tokens = u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0
+        output_tokens = u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated %d test cases via DeepSeek (%s)", len(test_cases), model)
     return test_cases, warnings, usage
@@ -410,12 +578,13 @@ async def _generate_with_deepseek(
 
 async def _generate_with_anthropic(
     requirement_text: str, api_key: str | None, model: str,
-    fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES
+    fields: list[str] | None = None, case_count: int = 10, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[TestCase], list[str], dict | None]:
     key = _get_anthropic_key(api_key)
-    client = _get_anthropic_client(key)
+    client = _get_anthropic_client(key, base_url=api_base_url)
     tool_schema = _get_tool_schema(fields)
-    system_prompt = _build_system_prompt(case_count)
+    system_prompt = _build_system_prompt(case_count, requirement_text)
     warnings: list[str] = []
 
     last_error = None
@@ -439,9 +608,9 @@ async def _generate_with_anthropic(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key at https://console.anthropic.com.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("Anthropic API attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -483,7 +652,9 @@ async def _generate_with_anthropic(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.input_tokens if u.input_tokens is not None else 0, "output_tokens": u.output_tokens if u.output_tokens is not None else 0, "model": model}
+        input_tokens = u.input_tokens if u.input_tokens is not None else 0
+        output_tokens = u.output_tokens if u.output_tokens is not None else 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated %d test cases via Anthropic (%s)", len(test_cases), model)
     return test_cases, warnings, usage
@@ -502,21 +673,21 @@ POLISH_SYSTEM_PROMPT = """You are an expert technical writer specializing in sof
 8. Output ONLY the polished document, no explanations or meta-commentary"""
 
 
-async def polish_requirement(requirement_text: str, model: str = "deepseek-chat", api_key: str | None = None) -> tuple[str, dict | None]:
+async def polish_requirement(requirement_text: str, model: str = "deepseek-chat", api_key: str | None = None, api_base_url: str | None = None) -> tuple[str, dict | None]:
     """Polish raw requirement text into structured format using the LLM.
 
     Results are cached in-memory for 1 hour.
     Returns (polished_text, usage).
     """
-    ck = _cache_key("polish", requirement_text, model)
+    ck = _cache_key("polish", requirement_text, model, api_base_url)
     cached = _cache_get(ck)
     if cached is not None:
         logger.info("Returning cached polish result for key=%s", ck[:12])
         return cached
     if model.startswith("deepseek"):
-        result = await _polish_with_deepseek(requirement_text, model, api_key)
+        result = await _polish_with_deepseek(requirement_text, model, api_key, api_base_url=api_base_url)
     elif model.startswith("claude") or model.startswith("anthropic"):
-        result = await _polish_with_anthropic(requirement_text, model, api_key)
+        result = await _polish_with_anthropic(requirement_text, model, api_key, api_base_url=api_base_url)
     elif model.startswith("gpt") or model.startswith("o1") or model.startswith("o3"):
         raise ValueError(f"Model '{model}' requires OpenAI API key. Use a DeepSeek or Anthropic model instead.")
     else:
@@ -525,9 +696,9 @@ async def polish_requirement(requirement_text: str, model: str = "deepseek-chat"
     return result
 
 
-async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES) -> tuple[str, dict | None]:
+async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES, api_base_url: str | None = None) -> tuple[str, dict | None]:
     key = _get_deepseek_key(api_key)
-    client = _get_deepseek_client(key)
+    client = _get_deepseek_client(key, base_url=api_base_url)
 
     last_error = None
     for attempt in range(retries + 1):
@@ -535,7 +706,7 @@ async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str 
             response = await client.chat.completions.create(
                 model=model or "deepseek-chat",
                 messages=[
-                    {"role": "system", "content": POLISH_SYSTEM_PROMPT},
+                    {"role": "system", "content": _get_polish_prompt()},
                     {"role": "user", "content": f"Polish the following requirement text into a well-structured document:\n\n---\n{requirement_text}\n---"},
                 ],
                 temperature=0.3,
@@ -544,9 +715,9 @@ async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str 
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("DeepSeek polish attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -563,14 +734,16 @@ async def _polish_with_deepseek(requirement_text: str, model: str, api_key: str 
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0, "output_tokens": u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0, "model": model}
+        input_tokens = u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0
+        output_tokens = u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     return content.strip(), usage
 
 
-async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES) -> tuple[str, dict | None]:
+async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str | None = None, retries: int = MAX_RETRIES, api_base_url: str | None = None) -> tuple[str, dict | None]:
     key = _get_anthropic_key(api_key)
-    client = _get_anthropic_client(key)
+    client = _get_anthropic_client(key, base_url=api_base_url)
 
     last_error = None
     for attempt in range(retries + 1):
@@ -579,7 +752,7 @@ async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str
                 model=model or "claude-sonnet-4-20250514",
                 max_tokens=8192,
                 temperature=0.3,
-                system=POLISH_SYSTEM_PROMPT,
+                system=_get_polish_prompt(),
                 messages=[
                     {"role": "user", "content": f"Polish the following requirement text into a well-structured document:\n\n---\n{requirement_text}\n---"},
                 ],
@@ -587,9 +760,9 @@ async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("Anthropic polish attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -607,7 +780,9 @@ async def _polish_with_anthropic(requirement_text: str, model: str, api_key: str
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.input_tokens if u.input_tokens is not None else 0, "output_tokens": u.output_tokens if u.output_tokens is not None else 0, "model": model}
+        input_tokens = u.input_tokens if u.input_tokens is not None else 0
+        output_tokens = u.output_tokens if u.output_tokens is not None else 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     return content.strip(), usage
 
@@ -618,6 +793,7 @@ async def generate_test_cases(
     model: str = "deepseek-chat",
     fields: list[str] | None = None,
     case_count: int = 10,
+    api_base_url: str | None = None,
 ) -> tuple[list[TestCase], list[str], dict | None]:
     """Generate test cases from requirement text.
 
@@ -628,22 +804,151 @@ async def generate_test_cases(
     Results are cached in-memory for 1 hour to avoid duplicate API calls.
     Returns (test_cases, warnings, usage).
     """
-    ck = _cache_key("generate_test_cases", requirement_text, model, fields, case_count)
+    ck = _cache_key("generate_test_cases", requirement_text, model, fields, case_count, api_base_url)
     cached = _cache_get(ck)
     if cached is not None:
         logger.info("Returning cached generation result for key=%s", ck[:12])
         return cached
 
     if model.startswith("deepseek"):
-        result = await _generate_with_deepseek(requirement_text, api_key, model, fields, case_count)
+        result = await _generate_with_deepseek(requirement_text, api_key, model, fields, case_count, api_base_url=api_base_url)
     elif model.startswith("claude") or model.startswith("anthropic"):
-        result = await _generate_with_anthropic(requirement_text, api_key, model, fields, case_count)
+        result = await _generate_with_anthropic(requirement_text, api_key, model, fields, case_count, api_base_url=api_base_url)
     elif model.startswith("gpt") or model.startswith("o1") or model.startswith("o3"):
         raise ValueError(f"Model '{model}' requires OpenAI API key. Please use a DeepSeek or Anthropic/Claude model, or configure OpenAI support separately.")
     else:
         raise ValueError(f"Unknown model prefix: '{model}'. Supported: deepseek-*, claude-*, gpt-*, o1-*, o3-*")
     _cache_set(ck, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Outline generation (step-by-step: outline first, then full cases)
+# ---------------------------------------------------------------------------
+
+OUTLINE_SYSTEM_PROMPT = """You are a senior QA engineer. Analyze the requirement below and produce a structured outline of test ideas.
+
+For each major feature or module, list 2-5 specific test ideas as concise bullet points. Group by module/feature name.
+
+Output valid JSON via the `create_outline` function with this structure:
+{
+  "outline": [
+    {
+      "module": "模块名称",
+      "test_ideas": ["验证...", "校验...", "确认..."]
+    }
+  ]
+}"""
+
+
+def _get_outline_tool_schema() -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": "create_outline",
+            "description": "Create a structured test outline grouped by module",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "outline": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "module": {"type": "string", "description": "模块或功能名称"},
+                                "test_ideas": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "测试要点列表",
+                                },
+                            },
+                            "required": ["module", "test_ideas"],
+                        },
+                    }
+                },
+                "required": ["outline"],
+            },
+        },
+    }
+
+
+async def generate_outline(
+    requirement_text: str,
+    api_key: str | None = None,
+    model: str = "deepseek-chat",
+    api_base_url: str | None = None,
+) -> tuple[list[dict], dict | None]:
+    """Generate a test outline (module + test ideas) from requirement text."""
+    from openai import AsyncOpenAI
+    from anthropic import AsyncAnthropic
+
+    if model.startswith("deepseek"):
+        client = AsyncOpenAI(api_key=_get_deepseek_key(api_key), base_url=api_base_url or "https://api.deepseek.com")
+        tool_schema = _get_outline_tool_schema()
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": _get_outline_prompt()},
+                    {"role": "user", "content": f"Analyze the following requirement and produce a test outline:\n\n---\n{requirement_text}\n---"},
+                ],
+                tools=[tool_schema],
+                tool_choice={"type": "function", "function": {"name": "create_outline"}},
+                temperature=0.4,
+                max_tokens=4096,
+                timeout=60,
+            )
+            msg = response.choices[0].message
+            if msg.tool_calls:
+                result = json.loads(msg.tool_calls[0].function.arguments)
+            else:
+                result = {"outline": []}
+            usage = None
+            if hasattr(response, "usage") and response.usage:
+                u = response.usage
+                input_tokens = u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0
+                output_tokens = u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0
+                usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
+            return result.get("outline", []), usage
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate outline: {e}")
+
+    elif model.startswith("claude") or model.startswith("anthropic"):
+        ac_kwargs = {"api_key": _get_anthropic_key(api_key)}
+        if api_base_url:
+            ac_kwargs["base_url"] = api_base_url
+        client = AsyncAnthropic(**ac_kwargs)
+        tool_schema = _get_outline_tool_schema()["function"]
+        try:
+            response = await client.messages.create(
+                model=model,
+                max_tokens=4096,
+                temperature=0.4,
+                system=_get_outline_prompt(),
+                messages=[
+                    {"role": "user", "content": f"Analyze the following requirement and produce a test outline:\n\n---\n{requirement_text}\n---"},
+                ],
+                tools=[tool_schema],
+                tool_choice={"type": "tool", "name": "create_outline"},
+                timeout=60,
+            )
+            tool_blocks = [b for b in response.content if b.type == "tool_use"]
+            if tool_blocks:
+                result = tool_blocks[0].input
+            else:
+                result = {"outline": []}
+            usage = None
+            if hasattr(response, "usage") and response.usage:
+                u = response.usage
+                input_tokens = u.input_tokens if u.input_tokens is not None else 0
+                output_tokens = u.output_tokens if u.output_tokens is not None else 0
+                usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
+            return result.get("outline", []), usage
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate outline: {e}")
+
+    else:
+        raise ValueError(f"Unsupported model: {model}")
 
 
 # ---------------------------------------------------------------------------
@@ -714,10 +1019,11 @@ def _get_openai_rtm_tool_schema() -> dict:
 
 async def _generate_rtm_with_deepseek(
     requirement_text: str, test_cases: list[dict], model: str,
-    api_key: str | None = None, retries: int = MAX_RETRIES
+    api_key: str | None = None, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     key = _get_deepseek_key(api_key)
-    client = _get_deepseek_client(key)
+    client = _get_deepseek_client(key, base_url=api_base_url)
     tool_schema = _get_openai_rtm_tool_schema()
 
     last_error = None
@@ -726,7 +1032,7 @@ async def _generate_rtm_with_deepseek(
             response = await client.chat.completions.create(
                 model=model or "deepseek-chat",
                 messages=[
-                    {"role": "system", "content": RTM_SYSTEM_PROMPT},
+                    {"role": "system", "content": _get_rtm_prompt()},
                     {
                         "role": "user",
                         "content": f"Requirement document:\n\n---\n{requirement_text}\n---\n\nTest cases:\n\n{json.dumps(test_cases, ensure_ascii=False, indent=2)}",
@@ -740,9 +1046,9 @@ async def _generate_rtm_with_deepseek(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("DeepSeek RTM attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -776,7 +1082,9 @@ async def _generate_rtm_with_deepseek(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0, "output_tokens": u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0, "model": model}
+        input_tokens = u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0
+        output_tokens = u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated RTM with %d items via DeepSeek", len(items))
     return items, usage
@@ -784,10 +1092,11 @@ async def _generate_rtm_with_deepseek(
 
 async def _generate_rtm_with_anthropic(
     requirement_text: str, test_cases: list[dict], model: str,
-    api_key: str | None = None, retries: int = MAX_RETRIES
+    api_key: str | None = None, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     key = _get_anthropic_key(api_key)
-    client = _get_anthropic_client(key)
+    client = _get_anthropic_client(key, base_url=api_base_url)
     tool_schema = _get_rtm_tool_schema()
 
     last_error = None
@@ -797,7 +1106,7 @@ async def _generate_rtm_with_anthropic(
                 model=model or "claude-sonnet-4-20250514",
                 max_tokens=8192,
                 temperature=0.3,
-                system=RTM_SYSTEM_PROMPT,
+                system=_get_rtm_prompt(),
                 messages=[
                     {
                         "role": "user",
@@ -810,9 +1119,9 @@ async def _generate_rtm_with_anthropic(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("Anthropic RTM attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -840,7 +1149,9 @@ async def _generate_rtm_with_anthropic(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.input_tokens if u.input_tokens is not None else 0, "output_tokens": u.output_tokens if u.output_tokens is not None else 0, "model": model}
+        input_tokens = u.input_tokens if u.input_tokens is not None else 0
+        output_tokens = u.output_tokens if u.output_tokens is not None else 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated RTM with %d items via Anthropic", len(items))
     return items, usage
@@ -851,15 +1162,16 @@ async def generate_rtm(
     test_cases: list[dict],
     api_key: str | None = None,
     model: str = "deepseek-chat",
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     """Generate Requirements Traceability Matrix mapping req items to test cases.
 
     Returns (rtm_items, usage).
     """
     if model.startswith("deepseek"):
-        return await _generate_rtm_with_deepseek(requirement_text, test_cases, model, api_key)
+        return await _generate_rtm_with_deepseek(requirement_text, test_cases, model, api_key, api_base_url=api_base_url)
     else:
-        return await _generate_rtm_with_anthropic(requirement_text, test_cases, model, api_key)
+        return await _generate_rtm_with_anthropic(requirement_text, test_cases, model, api_key, api_base_url=api_base_url)
 
 
 # ---------------------------------------------------------------------------
@@ -921,10 +1233,11 @@ def _get_openai_script_tool_schema() -> dict:
 
 async def _generate_scripts_with_deepseek(
     test_cases: list[dict], model: str,
-    api_key: str | None = None, retries: int = MAX_RETRIES
+    api_key: str | None = None, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     key = _get_deepseek_key(api_key)
-    client = _get_deepseek_client(key)
+    client = _get_deepseek_client(key, base_url=api_base_url)
     tool_schema = _get_openai_script_tool_schema()
 
     last_error = None
@@ -933,7 +1246,7 @@ async def _generate_scripts_with_deepseek(
             response = await client.chat.completions.create(
                 model=model or "deepseek-chat",
                 messages=[
-                    {"role": "system", "content": SCRIPT_SYSTEM_PROMPT},
+                    {"role": "system", "content": _get_script_prompt()},
                     {
                         "role": "user",
                         "content": f"Convert the following test cases into Playwright Python scripts:\n\n{json.dumps(test_cases, ensure_ascii=False, indent=2)}",
@@ -947,9 +1260,9 @@ async def _generate_scripts_with_deepseek(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("DeepSeek script generation attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -980,7 +1293,9 @@ async def _generate_scripts_with_deepseek(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0, "output_tokens": u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0, "model": model}
+        input_tokens = u.prompt_tokens if u.prompt_tokens is not None else getattr(u, "input_tokens", 0) or 0
+        output_tokens = u.completion_tokens if u.completion_tokens is not None else getattr(u, "output_tokens", 0) or 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated %d scripts via DeepSeek", len(scripts))
     return scripts, usage
@@ -988,10 +1303,11 @@ async def _generate_scripts_with_deepseek(
 
 async def _generate_scripts_with_anthropic(
     test_cases: list[dict], model: str,
-    api_key: str | None = None, retries: int = MAX_RETRIES
+    api_key: str | None = None, retries: int = MAX_RETRIES,
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     key = _get_anthropic_key(api_key)
-    client = _get_anthropic_client(key)
+    client = _get_anthropic_client(key, base_url=api_base_url)
     tool_schema = _get_script_tool_schema()
 
     last_error = None
@@ -1001,7 +1317,7 @@ async def _generate_scripts_with_anthropic(
                 model=model or "claude-sonnet-4-20250514",
                 max_tokens=16384,
                 temperature=0.2,
-                system=SCRIPT_SYSTEM_PROMPT,
+                system=_get_script_prompt(),
                 messages=[
                     {
                         "role": "user",
@@ -1014,9 +1330,9 @@ async def _generate_scripts_with_anthropic(
             break
         except Exception as e:
             last_error = e
-            error_msg = str(e)
-            if "401" in error_msg or "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            if _is_auth_error(e):
                 raise ValueError("Invalid API key. Please verify your key.") from e
+            error_msg = str(e)
             if attempt < retries and _is_retryable(error_msg):
                 logger.warning("Anthropic script generation attempt %d/%d failed: %s. Retrying in %ds...", attempt + 1, retries + 1, e, RETRY_DELAY)
                 await asyncio.sleep(RETRY_DELAY * (attempt + 1))
@@ -1044,7 +1360,9 @@ async def _generate_scripts_with_anthropic(
     usage = None
     if hasattr(response, "usage") and response.usage:
         u = response.usage
-        usage = {"input_tokens": u.input_tokens if u.input_tokens is not None else 0, "output_tokens": u.output_tokens if u.output_tokens is not None else 0, "model": model}
+        input_tokens = u.input_tokens if u.input_tokens is not None else 0
+        output_tokens = u.output_tokens if u.output_tokens is not None else 0
+        usage = {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": model, "cost": _compute_cost(model, input_tokens, output_tokens)}
 
     logger.info("Generated %d scripts via Anthropic", len(scripts))
     return scripts, usage
@@ -1054,12 +1372,13 @@ async def generate_scripts(
     test_cases: list[dict],
     api_key: str | None = None,
     model: str = "deepseek-chat",
+    api_base_url: str | None = None,
 ) -> tuple[list[dict], dict | None]:
     """Generate Playwright Python scripts from test case steps.
 
     Returns (scripts, usage).
     """
     if model.startswith("deepseek"):
-        return await _generate_scripts_with_deepseek(test_cases, model, api_key)
+        return await _generate_scripts_with_deepseek(test_cases, model, api_key, api_base_url=api_base_url)
     else:
-        return await _generate_scripts_with_anthropic(test_cases, model, api_key)
+        return await _generate_scripts_with_anthropic(test_cases, model, api_key, api_base_url=api_base_url)

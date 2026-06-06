@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    container_name: testcase-ai
+    container_name: testforge
     ports:
       - "8000:8000"
     volumes:
@@ -13,6 +13,12 @@ services:
     environment:
       - TZ=Asia/Shanghai
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/\")'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   testcase-data:

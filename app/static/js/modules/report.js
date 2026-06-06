@@ -1,4 +1,4 @@
-// ====== Report Page & Markdown Preview ======
+// ====== Report Page ======
 // Dependencies: window.toast, window.escHtml, window.showAlert, window.getTestCases, window.setEl
 
 function updateReport() {
@@ -112,31 +112,4 @@ function initReport() {
         });
     }
 
-    // ---- Markdown Preview ----
-    const _mdTextarea = document.getElementById("requirementText");
-    const _mdPreview = document.getElementById("mdPreview");
-    if (typeof marked !== "undefined") {
-        marked.setOptions({ breaks: true, gfm: true });
-    }
-    document.querySelectorAll(".input-tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            document.querySelectorAll(".input-tab").forEach(t => t.classList.remove("active"));
-            tab.classList.add("active");
-            const isPreview = tab.dataset.itab === "preview";
-            if (_mdTextarea) _mdTextarea.style.display = isPreview ? "none" : "";
-            if (_mdPreview) {
-                _mdPreview.style.display = isPreview ? "" : "none";
-                if (isPreview && typeof marked !== "undefined") {
-                    _mdPreview.innerHTML = marked.parse(_mdTextarea ? _mdTextarea.value : "");
-                }
-            }
-        });
-    });
-    if (_mdTextarea) {
-        _mdTextarea.addEventListener("input", () => {
-            if (_mdPreview && _mdPreview.style.display !== "none" && typeof marked !== "undefined") {
-                _mdPreview.innerHTML = marked.parse(_mdTextarea.value);
-            }
-        });
-    }
 }

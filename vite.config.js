@@ -76,6 +76,11 @@ function concatBundlePlugin() {
   window.initApiTest = typeof initApiTest !== 'undefined' ? initApiTest : undefined;
   /* scriptgen.js */
   window.initScriptGen = typeof initScriptGen !== 'undefined' ? initScriptGen : undefined;
+  /* auth.js */
+  window.switchAuthMode = typeof switchAuthMode !== 'undefined' ? switchAuthMode : undefined;
+  /* toolkit.js */
+  window.switchToolkitTab = typeof switchToolkitTab !== 'undefined' ? switchToolkitTab : undefined;
+  window.updateTimestamp = typeof updateTimestamp !== 'undefined' ? updateTimestamp : undefined;
   /* shortcuts.js */
   window.initShortcuts = typeof initShortcuts !== 'undefined' ? initShortcuts : undefined;
 })();

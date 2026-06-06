@@ -41,6 +41,7 @@ class GenerationRequest(BaseModel):
     model: str = "deepseek-chat"
     fields: list[str] | None = None  # If provided, only these fields will be generated
     case_count: int = Field(default=10, ge=0, le=200)  # 0=auto, 1-200=target count
+    api_base_url: str | None = None  # Custom API endpoint, uses default if empty
 
 
 class GenerationResponse(BaseModel):
@@ -58,6 +59,7 @@ class PolishRequest(BaseModel):
     requirement_text: str = Field(..., min_length=1, max_length=150000)
     api_key: str | None = None
     model: str = "deepseek-chat"
+    api_base_url: str | None = None
 
 
 class PolishResponse(BaseModel):
@@ -112,6 +114,7 @@ class RtmRequest(BaseModel):
     test_cases: list[dict] = Field(..., description="Current test cases array")
     model: str = "deepseek-chat"
     api_key: str | None = None
+    api_base_url: str | None = None
 
 
 class RtmResponse(BaseModel):
@@ -130,6 +133,7 @@ class ScriptRequest(BaseModel):
     test_cases: list[dict] = Field(..., min_length=1, max_length=50)
     model: str = "deepseek-chat"
     api_key: str | None = None
+    api_base_url: str | None = None
 
 
 class ScriptResponse(BaseModel):
@@ -155,7 +159,9 @@ class QueryResponse(BaseModel):
 # ---- Auth Models ----
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=6, max_length=128)
+    password: str = Field(min_length=8, max_length=128)
+    captcha_id: str = Field(default="", max_length=20)
+    captcha_answer: int | None = None
 
 
 class LoginRequest(BaseModel):

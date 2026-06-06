@@ -82,7 +82,7 @@ def _wait_for_server(url: str, timeout: float = 15.0) -> bool:
 
 
 def main() -> None:
-    _log("TestCaseAI desktop starting...")
+    _log("TestForge desktop starting...")
 
     try:
         port = _find_free_port(8000)

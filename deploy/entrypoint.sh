@@ -1,5 +1,5 @@
 #!/bin/bash
-# entrypoint.sh — fix data dir permissions, then run gunicorn as appuser
+# entrypoint.sh — fix data dir permissions, then run gunicorn as appuser (TestForge)
 
 # Ensure data directory exists and is writable by appuser
 mkdir -p /home/appuser/.TestCaseAI

@@ -80,9 +80,9 @@ class TestAuth:
 
     def test_password_hashing_differs(self, auth):
         """Same password gets different hashes due to random salt."""
-        u1 = auth.register_user("user_a", "samepassword")
-        u2 = auth.register_user("user_b", "samepassword")
+        u1 = auth.register_user("user_a", "samepassword1")
+        u2 = auth.register_user("user_b", "samepassword1")
         assert u1["id"] != u2["id"]
         # Both should authenticate
-        assert auth.authenticate_user("user_a", "samepassword") is not None
-        assert auth.authenticate_user("user_b", "samepassword") is not None
+        assert auth.authenticate_user("user_a", "samepassword1") is not None
+        assert auth.authenticate_user("user_b", "samepassword1") is not None

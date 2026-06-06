@@ -30,10 +30,12 @@
     // ====== Notifications Tab ======
     async function loadOpsNotifications() {
         try {
+            // Mark all as read when viewing notifications
+            await window.apiFetch("/api/notifications/read", { method: "POST" });
             const data = await window.apiFetch("/api/notifications");
             _allNotifs = (data && data.notifications) || [];
             if (typeof window.updateNotifBadge === "function") {
-                window.updateNotifBadge(data && data.unread_count ? data.unread_count : 0);
+                window.updateNotifBadge(0);
             }
         } catch (_) {
             _allNotifs = [];

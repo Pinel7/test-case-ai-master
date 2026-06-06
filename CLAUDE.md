@@ -42,7 +42,7 @@ git config --global --unset https.https://github.com.proxy
 
 ## Architecture
 
-**TestCaseAI** — a single-page FastAPI app that generates structured test cases from requirement documents via LLM APIs. Includes an online file editor (TXT/XLSX/DOCX), SQL query tool, bug tracker, buddy system (notifications, contacts, sharing), generation history, and JWT-free token-based auth.
+**TestForge** — a single-page FastAPI app that generates structured test cases from requirement documents via LLM APIs. Includes an online file editor (TXT/XLSX/DOCX), SQL query tool, bug tracker, buddy system (notifications, contacts, sharing), generation history, and JWT-free token-based auth.
 
 ### File structure
 

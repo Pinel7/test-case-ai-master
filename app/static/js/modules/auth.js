@@ -12,6 +12,26 @@ function getAuthHeaders() {
 }
 window.getAuthHeaders = getAuthHeaders;
 
+// ---- Login button handler (top-level, not waiting for DOMContentLoaded) ----
+document.getElementById("btnOlLogin")?.addEventListener("click", async () => {
+    console.log("[Auth] Login button clicked (top-level)");
+    const btn = document.getElementById("btnOlLogin");
+    if (!btn) { console.error("[Auth] btnOlLogin not found!"); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> 登录中...';
+    try {
+        await doLogin(
+            document.getElementById("olLoginUsername").value,
+            document.getElementById("olLoginPassword").value,
+            true
+        );
+    } catch(e) {
+        console.error("[Auth] doLogin error:", e);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> 登录';
+});
+
 function showLoginOverlay() {
     const overlay = document.getElementById("loginOverlay");
     if (overlay) overlay.style.display = "flex";
@@ -29,6 +49,9 @@ function switchOverlayMode(mode) {
     const orf = document.getElementById("olFormRegister"); if (orf) orf.style.display = mode === "register" ? "" : "none";
     const ole = document.getElementById("olLoginError"); if (ole) ole.style.display = "none";
     const ore = document.getElementById("olRegError"); if (ore) ore.style.display = "none";
+    if (mode === "register" && typeof loadCaptcha === "function") {
+        setTimeout(() => loadCaptcha("ol"), 100);
+    }
 }
 
 function switchAuthMode(mode) {
@@ -39,6 +62,9 @@ function switchAuthMode(mode) {
     const amt = document.getElementById("authModalTitle"); if (amt) amt.textContent = mode === "login" ? "登录" : "注册";
     const ale = document.getElementById("authLoginError"); if (ale) ale.style.display = "none";
     const are = document.getElementById("authRegError"); if (are) are.style.display = "none";
+    if (mode === "register" && typeof loadCaptcha === "function") {
+        setTimeout(() => loadCaptcha("auth"), 100);
+    }
 }
 
 function updateAuthUI() {
@@ -235,6 +261,7 @@ function initHomePage() {
                         homeKeyResult.textContent = "连接成功 (" + (data.model || "") + ")";
                         homeKeyResult.className = "home-key-test-result success";
                     }
+                    saveUserSettings({ api_key: key });
                 } else {
                     if (homeKeyResult) {
                         homeKeyResult.textContent = data.message || "验证失败";
@@ -351,8 +378,7 @@ async function doLogin(username, password, isOverlay = false) {
         localStorage.setItem(AUTH_TOKEN_KEY, authToken);
         updateAuthUI();
         hideLoginOverlay();
-        const modal = bootstrap.Modal.getInstance(document.getElementById("authModal"));
-        if (modal) modal.hide();
+        try { const modal = bootstrap.Modal.getInstance(document.getElementById("authModal")); if (modal) modal.hide(); } catch (_) {}
         toast("登录成功，欢迎 " + currentUser.username, "success");
         await loadUserSettings();
         window.navigateTo("home");
@@ -364,19 +390,57 @@ async function doLogin(username, password, isOverlay = false) {
     }
 }
 
+async function loadCaptcha(prefix) {
+    prefix = prefix || "ol";
+    const qEl = document.getElementById(prefix + "CaptchaQuestion");
+    const answerEl = document.getElementById(prefix + "CaptchaAnswer");
+    if (!qEl) return;
+    try {
+        const resp = await fetch("/api/auth/captcha");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        window._captchaId = data.id;
+        qEl.textContent = data.question;
+        if (answerEl) answerEl.value = "";
+    } catch (_) {
+        qEl.textContent = "加载失败";
+    }
+}
+
 async function doRegister(username, password, isOverlay = false) {
     const toast = window.toast;
     const errEl = document.getElementById(isOverlay ? "olRegError" : "authRegError");
+    // Client-side pre-validation
+    if (!/^[a-zA-Z一-鿿][a-zA-Z0-9_一-鿿]{1,29}$/.test(username)) {
+        const msg = "用户名需以字母或中文开头，只能包含字母、数字、下划线";
+        if (errEl) { errEl.textContent = msg; errEl.style.display = ""; }
+        return false;
+    }
+    if (password.length < 8) {
+        const msg = "密码至少8个字符";
+        if (errEl) { errEl.textContent = msg; errEl.style.display = ""; }
+        return false;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9!@#$%^&*()_+\[\]{};':"\\|,.<>\/?~`-]/.test(password)) {
+        const msg = "密码必须包含字母和数字或特殊字符";
+        if (errEl) { errEl.textContent = msg; errEl.style.display = ""; }
+        return false;
+    }
+    // Gather captcha
+    const captchaPrefix = isOverlay ? "ol" : "auth";
+    const captchaId = window._captchaId || "";
+    const captchaAnswer = parseInt(document.getElementById(captchaPrefix + "CaptchaAnswer")?.value || "") || 0;
     try {
         const resp = await fetch("/api/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, captcha_id: captchaId, captcha_answer: captchaAnswer }),
         });
         const data = await resp.json();
         if (!resp.ok) {
             const msg = data.detail?.message || "注册失败";
             if (errEl) { errEl.textContent = msg; errEl.style.display = ""; }
+            loadCaptcha(captchaPrefix);  // Refresh captcha on error
             return false;
         }
         authToken = data.token;
@@ -385,8 +449,7 @@ async function doRegister(username, password, isOverlay = false) {
         localStorage.setItem(AUTH_TOKEN_KEY, authToken);
         updateAuthUI();
         hideLoginOverlay();
-        const modal = bootstrap.Modal.getInstance(document.getElementById("authModal"));
-        if (modal) modal.hide();
+        try { const modal = bootstrap.Modal.getInstance(document.getElementById("authModal")); if (modal) modal.hide(); } catch (_) {}
         toast("注册成功，欢迎 " + currentUser.username, "success");
         await loadUserSettings();
         window.navigateTo("home");
@@ -394,6 +457,7 @@ async function doRegister(username, password, isOverlay = false) {
         return true;
     } catch(e) {
         if (errEl) { errEl.textContent = "网络错误: " + e.message; errEl.style.display = ""; }
+        loadCaptcha(captchaPrefix);
         return false;
     }
 }
@@ -464,27 +528,6 @@ function initAuth() {
         tab.addEventListener("click", () => switchAuthMode(tab.dataset.amode));
     });
 
-    // Overlay login button
-    document.getElementById("btnOlLogin")?.addEventListener("click", async () => {
-        console.log("[Auth] Login button clicked");
-        const btn = document.getElementById("btnOlLogin");
-        if (!btn) { console.error("[Auth] btnOlLogin not found!"); return; }
-        console.log("[Auth] doLogin type:", typeof doLogin);
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> 登录中...';
-        try {
-            await doLogin(
-                document.getElementById("olLoginUsername").value,
-                document.getElementById("olLoginPassword").value,
-                true
-            );
-        } catch(e) {
-            console.error("[Auth] doLogin error:", e);
-        }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> 登录';
-    });
-
     // Overlay register button
     document.getElementById("btnOlRegister")?.addEventListener("click", async () => {
         const username = document.getElementById("olRegUsername").value;
@@ -502,6 +545,10 @@ function initAuth() {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-person-plus me-1"></i> 注册';
     });
+
+    // Captcha refresh
+    document.getElementById("btnOlRefreshCaptcha")?.addEventListener("click", () => loadCaptcha("ol"));
+    document.getElementById("btnAuthRefreshCaptcha")?.addEventListener("click", () => loadCaptcha("auth"));
 
     // Sidebar auth button → modal
     document.getElementById("btnAuth")?.addEventListener("click", () => {
@@ -589,6 +636,7 @@ function initAuth() {
                 const apiKeyInput = document.getElementById("apiKeyInput");
                 if (apiKeyInput) apiKeyInput.value = key;
                 localStorage.setItem("itg_apikey", key);
+                saveUserSettings({ api_key: key });
                 updateApiWarnDot();
             } else {
                 resultEl.textContent = data.message || "Key 验证失败，请检查是否输入正确";

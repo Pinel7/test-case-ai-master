@@ -62,6 +62,11 @@ def _init_db() -> None:
             except sqlite3.OperationalError:
                 pass
 
+            try:
+                conn.execute("ALTER TABLE test_case_sets ADD COLUMN status TEXT DEFAULT 'pending'")
+            except Exception:
+                pass
+
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS bugs (
@@ -137,6 +142,19 @@ def _init_db() -> None:
                 """
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON generation_history(user_id, created_at)")
+            # Migration: add cost-tracking columns
+            try:
+                conn.execute("ALTER TABLE generation_history ADD COLUMN tokens_prompt INTEGER DEFAULT 0")
+            except Exception:
+                pass
+            try:
+                conn.execute("ALTER TABLE generation_history ADD COLUMN tokens_completion INTEGER DEFAULT 0")
+            except Exception:
+                pass
+            try:
+                conn.execute("ALTER TABLE generation_history ADD COLUMN cost REAL DEFAULT 0.0")
+            except Exception:
+                pass
 
             conn.execute(
                 """
@@ -149,6 +167,60 @@ def _init_db() -> None:
                 )
                 """
             )
+
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS prompt_templates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    label TEXT NOT NULL DEFAULT '',
+                    prompt_text TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    model_pattern TEXT DEFAULT '',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            # Seed default prompt templates if table is empty
+            existing = conn.execute("SELECT COUNT(*) FROM prompt_templates").fetchone()[0]
+            if existing == 0:
+                now = now_str()
+                defaults = [
+                    ("generate_main", "测试用例生成（主）",
+                     "__USE_DEFAULT__",
+                     "主测试用例生成的系统提示词。修改后立即生效，无需重启。", "", 1, now, now),
+                    ("polish", "需求润色",
+                     "__USE_DEFAULT__",
+                     "需求文档润色的系统提示词。", "", 1, now, now),
+                    ("outline", "测试要点大纲",
+                     "__USE_DEFAULT__",
+                     "生成测试要点大纲的系统提示词。", "", 1, now, now),
+                    ("rtm", "需求追溯矩阵",
+                     "__USE_DEFAULT__",
+                     "生成需求追溯矩阵的系统提示词。", "", 1, now, now),
+                    ("script", "自动化脚本生成",
+                     "__USE_DEFAULT__",
+                     "生成Playwright自动化测试脚本的系统提示词。", "", 1, now, now),
+                ]
+                conn.executemany(
+                    "INSERT INTO prompt_templates (name, label, prompt_text, description, model_pattern, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    defaults,
+                )
+
+            # Specifications table for module-specific test case writing guidelines
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS specifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    module_keywords TEXT NOT NULL DEFAULT '',
+                    content TEXT NOT NULL DEFAULT '',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
             conn.commit()
         finally:
             conn.close()

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from app.models import (
     LibrarySaveRequest, LibraryUpdateRequest,
     FolderCreateRequest, FolderRenameRequest, SetMoveRequest,
@@ -10,11 +11,11 @@ router = APIRouter(tags=["library"])
 
 @router.get("/api/library/list")
 async def library_list(folder_id: int | None = None, q: str = "",
-                       limit: int = 0, offset: int = 0,
+                       limit: int = 0, offset: int = 0, status: str = "",
                        user: dict = Depends(current_user)):
     from app.services.database import list_sets
     def _list():
-        sets, total = list_sets(folder_id, user.get("id", 0), q.strip(), limit, offset)
+        sets, total = list_sets(folder_id, user.get("id", 0), q.strip(), limit, offset, status.strip())
         return {"sets": sets, "total": total, "limit": limit, "offset": offset}
     return safe_api_call(_list, "Failed to list library sets")
 
@@ -93,6 +94,23 @@ async def library_update(set_id: int, req: LibraryUpdateRequest, user: dict = De
             raise HTTPException(status_code=404, detail={"error_code": "not_found", "message": "Set not found"})
         return {"message": "Updated successfully"}
     return safe_api_call(_update, "Failed to update library set")
+
+
+class SetStatusRequest(BaseModel):
+    status: str
+
+
+@router.put("/api/library/{set_id}/status")
+async def library_set_status(set_id: int, req: SetStatusRequest, user: dict = Depends(current_user)):
+    from app.services.database import set_set_status
+    if req.status not in ("draft", "pending", "approved", "rejected"):
+        raise HTTPException(status_code=400, detail={"error_code": "invalid_request", "message": "Invalid status"})
+    def _set():
+        ok = set_set_status(set_id, user.get("id", 0), req.status)
+        if not ok:
+            raise HTTPException(status_code=404, detail={"error_code": "not_found", "message": "Set not found"})
+        return {"message": "状态已更新"}
+    return safe_api_call(_set, "Failed to set status")
 
 
 @router.delete("/api/library/{set_id}")

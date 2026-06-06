@@ -12,6 +12,9 @@ class SaveHistoryRequest(BaseModel):
     requirement_text: str
     test_cases: list[dict]
     model: str = "deepseek-chat"
+    tokens_prompt: int = 0
+    tokens_completion: int = 0
+    cost: float = 0.0
 
 
 def _get_conn():
@@ -39,7 +42,8 @@ async def history_list(user: dict = Depends(current_user)):
     try:
         rows = conn.execute(
             """SELECT id, model, case_count, created_at,
-               substr(requirement_text, 1, 200) AS requirement_preview
+               tokens_prompt, tokens_completion, cost,
+               substr(requirement_text, 1, 60) AS requirement_preview
                FROM generation_history WHERE user_id = ?
                ORDER BY created_at DESC LIMIT 50""",
             (uid,),
@@ -66,9 +70,10 @@ async def history_save(data: SaveHistoryRequest, user: dict = Depends(current_us
     conn = _get_conn()
     try:
         cur = conn.execute(
-            "INSERT INTO generation_history (user_id, requirement_text, test_cases, model, case_count, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO generation_history (user_id, requirement_text, test_cases, model, case_count, created_at, tokens_prompt, tokens_completion, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (uid, data.requirement_text, json.dumps(data.test_cases, ensure_ascii=False),
-             data.model, len(data.test_cases), now_str()),
+             data.model, len(data.test_cases), now_str(),
+             data.tokens_prompt, data.tokens_completion, data.cost),
         )
         conn.commit()
         return {"id": cur.lastrowid, "message": "已保存到历史记录"}
